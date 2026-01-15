@@ -46,12 +46,18 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# 复制 Prisma 生成的客户端
+# 复制 Prisma 生成的客户端和 CLI
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+
+# 复制初始化脚本
+COPY --from=builder /app/seed-db.js ./seed-db.js
+COPY --from=builder /app/docker-entrypoint.sh ./docker-entrypoint.sh
 
 # 创建上传目录并设置权限
 RUN mkdir -p /app/public/uploads && chown -R nextjs:nodejs /app/public/uploads
+RUN chmod +x /app/docker-entrypoint.sh
 
 USER nextjs
 
@@ -60,5 +66,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# 启动应用
-CMD ["node", "server.js"]
+# 使用启动脚本（自动初始化数据库）
+CMD ["/app/docker-entrypoint.sh"]

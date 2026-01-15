@@ -70,10 +70,8 @@ mkdir 98pct && cd 98pct
 2. **创建 docker-compose.yml**
 
 ```yaml
-version: '3.8'
-
 services:
-  app:
+  98pct:
     image: ghcr.io/dick86114/98pct:latest
     container_name: 98pct
     ports:
@@ -83,8 +81,11 @@ services:
     environment:
       - NODE_ENV=production
     volumes:
+      # 持久化上传的文件
       - ./uploads:/app/public/uploads
     restart: unless-stopped
+    network_mode: bridge
+    # 健康检查
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
       interval: 30s
@@ -116,19 +117,12 @@ docker compose up -d
 docker compose logs -f
 ```
 
-5. **初始化数据库并创建管理员**
+容器启动时会自动完成以下初始化：
+- 同步数据库结构
+- 创建角色数据
+- 创建默认管理员账号
 
-首次部署需要同步数据库结构并初始化数据：
-
-```bash
-# 同步数据库结构
-docker exec -it 98pct npx prisma db push
-
-# 初始化数据（创建角色和默认管理员账号）
-docker exec -it 98pct node seed-db.js
-```
-
-6. **默认管理员账号**
+5. **默认管理员账号**
 
 初始化完成后，系统会自动创建一个超级管理员账号：
 
