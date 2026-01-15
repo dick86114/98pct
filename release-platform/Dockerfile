@@ -46,10 +46,14 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# 复制 Prisma 生成的客户端和 CLI
+# 复制 Prisma 相关文件（客户端、CLI、引擎）
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+
+# 复制 bcryptjs（seed-db.js 需要）
+COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
 
 # 复制初始化脚本
 COPY --from=builder /app/seed-db.js ./seed-db.js
@@ -65,6 +69,8 @@ EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+# 添加 node_modules/.bin 到 PATH
+ENV PATH="/app/node_modules/.bin:$PATH"
 
 # 使用启动脚本（自动初始化数据库）
 CMD ["/app/docker-entrypoint.sh"]
