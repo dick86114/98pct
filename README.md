@@ -116,21 +116,29 @@ docker compose up -d
 docker compose logs -f
 ```
 
-5. **初始化数据库**
+5. **初始化数据库并创建管理员**
 
-首次部署需要同步数据库结构：
+首次部署需要同步数据库结构并初始化数据：
 
 ```bash
+# 同步数据库结构
 docker exec -it 98pct npx prisma db push
+
+# 初始化数据（创建角色和默认管理员账号）
+docker exec -it 98pct node seed-db.js
 ```
 
-6. **创建管理员账号**
+6. **默认管理员账号**
 
-```bash
-docker exec -it 98pct node create-admin.js
-```
+初始化完成后，系统会自动创建一个超级管理员账号：
 
-默认管理员账号：`admin` / `admin123`
+| 项目 | 值 |
+|------|------|
+| 用户名 | `admin` |
+| 密码 | `admin123` |
+| 邮箱 | `admin@98pct.com` |
+
+> ⚠️ **安全提示**：首次登录后请立即修改默认密码！
 
 ### 访问平台
 

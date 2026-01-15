@@ -23,29 +23,23 @@ async function main() {
         console.log(`Role ${roleData.code} (${roleData.name}) seeded.`);
     }
 
-    // Seed Users
-    const users = [
-        { email: '99738440@qq.com', name: '郑亮', role: 'PM' },
-        { email: 'tangjun@qq.com', name: '唐俊', role: 'RD' },
-        { email: 'ceshi@qq.com', name: '承晨旭', role: 'QA' },
-        { email: 'linxiaofeng@qq.com', name: '林晓锋', role: 'PO' },
-        { email: 'zhengzhiwen@qq.com', name: '郑致文', role: 'DBA' },
-        { email: 'yunwei@qq.com', name: '运维人员', role: 'OP' }
-    ];
-
-    const hashedPassword = await bcrypt.hash('123456', 12);
-
-    for (const userData of users) {
-        await prisma.user.upsert({
-            where: { email: userData.email },
-            update: {},
-            create: {
-                ...userData,
-                password: hashedPassword,
-            },
-        });
-        console.log(`User ${userData.name} (${userData.role}) seeded.`);
-    }
+    // 创建默认超级管理员账号
+    const adminPassword = await bcrypt.hash('admin123', 12);
+    await prisma.user.upsert({
+        where: { email: 'admin@98pct.com' },
+        update: { password: adminPassword, role: 'ADMIN' },
+        create: {
+            username: 'admin',
+            email: 'admin@98pct.com',
+            password: adminPassword,
+            name: '系统管理员',
+            phone: '13800000000',
+            role: 'ADMIN'
+        }
+    });
+    console.log('默认管理员账号创建成功');
+    console.log('用户名: admin');
+    console.log('密码: admin123')
 }
 
 main()
