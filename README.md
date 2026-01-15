@@ -72,7 +72,10 @@ mkdir 98pct && cd 98pct
 ```yaml
 services:
   98pct:
-    image: ghcr.io/dick86114/98pct:latest
+    # 使用 Docker Hub 镜像（推荐，国内访问更快）
+    image: dick86114/98pct:latest
+    # 或使用 GitHub Container Registry 镜像
+    # image: ghcr.io/dick86114/98pct:latest
     container_name: 98pct
     ports:
       - "9898:3000"
@@ -81,11 +84,9 @@ services:
     environment:
       - NODE_ENV=production
     volumes:
-      # 持久化上传的文件
       - ./uploads:/app/public/uploads
     restart: unless-stopped
     network_mode: bridge
-    # 健康检查
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
       interval: 30s
@@ -93,6 +94,10 @@ services:
       retries: 3
       start_period: 40s
 ```
+
+**镜像地址：**
+- Docker Hub: `dick86114/98pct:latest`（推荐）
+- GHCR: `ghcr.io/dick86114/98pct:latest`
 
 3. **创建环境变量文件 `.env`**
 
