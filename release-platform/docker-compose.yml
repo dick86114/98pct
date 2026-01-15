@@ -1,13 +1,6 @@
 # 九成八发版管理平台 Docker Compose 配置
-version: '3.8'
-
 services:
-  app:
-    # 使用 GitHub Container Registry 镜像
-    # 本地构建请取消注释下面两行，并注释 image 行
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile
+  98pct:
     image: ghcr.io/dick86114/98pct:latest
     container_name: 98pct
     ports:
@@ -20,6 +13,7 @@ services:
       # 持久化上传的文件
       - ./uploads:/app/public/uploads
     restart: unless-stopped
+    network_mode: bridge
     # 健康检查
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
