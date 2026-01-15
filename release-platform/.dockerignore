@@ -1,0 +1,47 @@
+# 依赖目录
+node_modules
+.pnpm-store
+
+# 构建输出
+.next
+out
+dist
+build
+
+# 开发文件
+.git
+.gitignore
+*.md
+README*
+
+# 环境配置（运行时通过环境变量传入）
+.env
+.env.*
+!.env.example
+
+# 测试文件
+tests
+*.spec.js
+*.test.js
+playwright.config.js
+playwright-report
+test-results
+
+# IDE 和编辑器
+.vscode
+.idea
+*.swp
+*.swo
+
+# 日志
+*.log
+npm-debug.log*
+
+# 数据库文件（开发用）
+prisma/*.db
+prisma/*.db-journal
+
+# 其他
+.DS_Store
+Thumbs.db
+*.tgz

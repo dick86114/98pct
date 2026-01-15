@@ -1,0 +1,169 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  Int             @id @default(autoincrement())
+  username            String?         @unique  // 用户名
+  email               String          @unique
+  phone               String?         @unique
+  password            String
+  name                String
+  role                String          @default("RD")
+  createdAt           DateTime        @default(now())
+  confirmedChecklists Checklist[]     @relation("ChecklistConfirmer")
+  checklists          Checklist[]
+  documents           Document[]
+  releases            Release[]
+  releaseMembers      ReleaseMember[]
+}
+
+model Release {
+  id            Int             @id @default(autoincrement())
+  version       String          @unique
+  description   String
+  codeChanges   String          @default("")
+  sqlChanges    String          @default("")
+  configChanges String          @default("")
+  rollbackPlan  String          @default("")
+  platform      String          @default("门户")
+  stage         String          @default("PREPARATION")
+  status        String          @default("DRAFT")
+  plannedDate   DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  createdById   Int
+  checklists    Checklist[]
+  documents     Document[]
+  createdBy     User            @relation(fields: [createdById], references: [id])
+  members       ReleaseMember[]
+}
+
+model ReleaseMember {
+  id        Int            @id @default(autoincrement())
+  releaseId Int
+  userId    Int
+  content   MemberContent?
+  release   Release        @relation(fields: [releaseId], references: [id])
+  user      User           @relation(fields: [userId], references: [id])
+
+  @@unique([releaseId, userId])
+}
+
+model MemberContent {
+  id              Int            @id @default(autoincrement())
+  releaseMemberId Int            @unique
+  devName         String?
+  devPhone        String?
+  system          String?
+  contentDesc     String?
+  configChanges   ConfigChange[]
+  dbChanges       DbChange[]
+  // QA 测试相关字段
+  qaName          String?
+  qaPhone         String?
+  qaTestDate      DateTime?
+  // PO 验收相关字段
+  poName          String?
+  poPhone         String?
+  poAcceptDate    DateTime?
+  // DBA 审核相关字段
+  dbaName         String?
+  dbaPhone        String?
+  dbaReviewDate   DateTime?
+  // DBA 实施结果字段
+  dbaExecTime     DateTime?  // 实际执行时间
+  dbaExecName     String?    // 执行人姓名
+  dbaExecPhone    String?    // 执行人手机
+  dbaExecResult   String?    // 执行结果
+  dbaRollbackInfo String?    // 回滚情况
+  dbaExecRemark   String?    // 备注
+  // OP 运维相关字段
+  opName          String?
+  opPhone         String?
+  opBackupDate    DateTime?
+  rollbackPlan    String?
+  releaseMember   ReleaseMember  @relation(fields: [releaseMemberId], references: [id], onDelete: Cascade)
+}
+
+model DbChange {
+  id              Int           @id @default(autoincrement())
+  memberContentId Int
+  reason          String
+  executionTime   DateTime
+  changeType      String
+  dbName          String
+  tableName       String
+  sql             String
+  impact          String
+  affectsOnline   Boolean
+  memberContent   MemberContent @relation(fields: [memberContentId], references: [id], onDelete: Cascade)
+}
+
+model ConfigChange {
+  id              Int           @id @default(autoincrement())
+  memberContentId Int
+  reason          String
+  content         String
+  impact          String
+  affectsOnline   Boolean
+  memberContent   MemberContent @relation(fields: [memberContentId], references: [id], onDelete: Cascade)
+}
+
+model Checklist {
+  id            Int       @id @default(autoincrement())
+  releaseId     Int
+  userId        Int
+  itemKey       String
+  stage         String
+  checked       Boolean   @default(false)
+  confirmedById Int?
+  confirmedAt   DateTime?
+  confirmedBy   User?     @relation("ChecklistConfirmer", fields: [confirmedById], references: [id])
+  release       Release   @relation(fields: [releaseId], references: [id])
+  user          User      @relation(fields: [userId], references: [id])
+
+  @@unique([releaseId, itemKey, userId])
+}
+
+model Document {
+  id           Int      @id @default(autoincrement())
+  releaseId    Int?
+  type         String
+  filename     String
+  filepath     String
+  uploadedById Int
+  createdAt    DateTime @default(now())
+  release      Release? @relation(fields: [releaseId], references: [id])
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+}
+
+model PlatformOption {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+}
+
+model Role {
+  id   Int    @id @default(autoincrement())
+  code String @unique
+  name String
+}
+
+// 数据字典表
+model Dictionary {
+  id        Int      @id @default(autoincrement())
+  type      String   // 字典类型：platform, status, stage, docType 等
+  code      String   // 字典编码
+  name      String   // 显示名称
+  sortOrder Int      @default(0) // 排序
+  enabled   Boolean  @default(true) // 是否启用
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([type, code])
+}

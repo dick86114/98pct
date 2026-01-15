@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(wc:*)",
+      "Bash(node test-db.js:*)",
+      "Bash(npm run dev)",
+      "Bash(npm install:*)",
+      "Bash(npx playwright install:*)"
+    ]
+  }
+}
