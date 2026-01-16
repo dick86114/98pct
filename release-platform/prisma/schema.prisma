@@ -48,6 +48,7 @@ model ReleaseMember {
   id        Int            @id @default(autoincrement())
   releaseId Int
   userId    Int
+  role      String         @default("")  // 成员在该发版中的角色（可能与用户的全部角色不同）
   content   MemberContent?
   release   Release        @relation(fields: [releaseId], references: [id])
   user      User           @relation(fields: [userId], references: [id])
@@ -72,10 +73,12 @@ model MemberContent {
   poName          String?
   poPhone         String?
   poAcceptDate    DateTime?
+  poAcceptComment String?   // PO 验收意见
   // DBA 审核相关字段
   dbaName         String?
   dbaPhone        String?
   dbaReviewDate   DateTime?
+  dbaReviewComment String?   // DBA 审核意见
   // DBA 实施结果字段
   dbaExecTime     DateTime?  // 实际执行时间
   dbaExecName     String?    // 执行人姓名

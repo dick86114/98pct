@@ -12,7 +12,11 @@ export default function Navbar() {
     const [user, setUser] = useState(null);
     const { getRoleLabel } = useRoles();
     const [showMobileMenu, setShowMobileMenu] = useState(false);
+    const [showAdminMenu, setShowAdminMenu] = useState(false);
+    const [showUserMenu, setShowUserMenu] = useState(false);
+    const [scrolled, setScrolled] = useState(false);
     const adminMenuRef = useRef(null);
+    const userMenuRef = useRef(null);
 
     useEffect(() => {
         const userStr = localStorage.getItem('user');
@@ -21,18 +25,29 @@ export default function Navbar() {
         }
     }, []);
 
+    // 监听滚动
+    useEffect(() => {
+        const handleScroll = () => {
+            setScrolled(window.scrollY > 10);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
     // 点击外部关闭下拉菜单
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (adminMenuRef.current && !adminMenuRef.current.contains(event.target)) {
                 setShowAdminMenu(false);
             }
+            if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+                setShowUserMenu(false);
+            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const isPM = (user?.role || '').split(',').includes('PM');
     const isAdmin = (user?.role || '').split(',').includes('ADMIN');
 
     const handleLogout = () => {
@@ -42,82 +57,72 @@ export default function Navbar() {
     };
 
     const navLinks = [
-        { href: '/dashboard', label: '仪表盘', icon: '📊' },
-        { href: '/releases', label: '发版管理', icon: '🚀' },
+        { href: '/dashboard', label: '仪表盘', icon: DashboardIcon },
+        { href: '/releases', label: '发版管理', icon: RocketIcon },
     ];
 
-    // 超级管理员菜单
     const adminLinks = isAdmin ? [
-        { href: '/users', label: '用户管理', icon: '👥' },
-        { href: '/admin/releases', label: '发版记录', icon: '📋' },
-        { href: '/admin/dictionary', label: '数据字典', icon: '⚙️' },
+        { href: '/users', label: '用户管理', icon: UsersIcon },
+        { href: '/admin/releases', label: '发版记录', icon: ListIcon },
+        { href: '/admin/dictionary', label: '数据字典', icon: DatabaseIcon },
     ] : [];
-    
-    const [showAdminMenu, setShowAdminMenu] = useState(false);
 
     return (
         <>
-            <nav className="navbar">
-                <div className="navbar-content">
+            <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
+                <div className="nav-container">
+                    {/* Logo */}
                     <Link href="/dashboard" className="navbar-brand">
-                        <img src="/logo.png" alt="九成八" className="navbar-brand-logo" />
-                        <span className="navbar-brand-text">九成八</span>
+                        <div className="brand-logo-wrapper">
+                            <div className="brand-logo-glow"></div>
+                            <div className="brand-logo-ring"></div>
+                            <div className="brand-logo">
+                                <img src="/logo.png" alt="九成八" />
+                            </div>
+                        </div>
+                        <div className="brand-text-wrapper">
+                            <span className="brand-text">九成八</span>
+                            <span className="brand-subtitle">发版管理平台</span>
+                        </div>
                     </Link>
 
-                    {/* 移动端菜单按钮 */}
-                    <button 
-                        className="mobile-menu-btn"
-                        onClick={() => setShowMobileMenu(!showMobileMenu)}
-                        aria-label="菜单"
-                    >
-                        {showMobileMenu ? '✕' : '☰'}
-                    </button>
-
                     {/* 桌面端导航 */}
-                    <div className="navbar-nav desktop-nav">
+                    <div className="navbar-nav">
                         {navLinks.map((link) => (
                             <Link
                                 key={link.href}
                                 href={link.href}
-                                className={`navbar-link ${pathname === link.href ? 'active' : ''}`}
+                                className={`nav-link ${pathname === link.href ? 'active' : ''}`}
                             >
-                                <span className="nav-icon">{link.icon}</span>
-                                <span className="nav-label">{link.label}</span>
+                                <link.icon />
+                                <span>{link.label}</span>
                             </Link>
                         ))}
                         
-                        {/* 超级管理员菜单 */}
+                        {/* 管理员菜单 */}
                         {isAdmin && (
-                            <div ref={adminMenuRef} className="admin-menu-wrapper">
+                            <div ref={adminMenuRef} className="dropdown-wrapper">
                                 <button
-                                    className={`navbar-link ${pathname.startsWith('/admin') ? 'active' : ''}`}
+                                    className={`nav-link ${pathname.startsWith('/admin') || pathname === '/users' ? 'active' : ''}`}
                                     onClick={() => setShowAdminMenu(!showAdminMenu)}
                                 >
-                                    <span className="nav-icon">⚙️</span>
-                                    <span className="nav-label">系统管理</span>
-                                    <span className="dropdown-arrow">▼</span>
+                                    <SettingsIcon />
+                                    <span>系统管理</span>
+                                    <ChevronIcon className={showAdminMenu ? 'rotate' : ''} />
                                 </button>
                                 
                                 {showAdminMenu && (
-                                    <div className="admin-dropdown">
+                                    <div className="dropdown-menu">
+                                        <div className="dropdown-header">系统管理</div>
                                         {adminLinks.map((link) => (
                                             <Link
                                                 key={link.href}
                                                 href={link.href}
                                                 className={`dropdown-item ${pathname === link.href ? 'active' : ''}`}
                                                 onClick={() => setShowAdminMenu(false)}
-                                                style={{
-                                                    display: 'block',
-                                                    padding: '10px 16px',
-                                                    color: pathname === link.href ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                                    background: pathname === link.href ? 'var(--bg-tertiary)' : 'transparent',
-                                                    borderBottom: '1px solid var(--border-color)',
-                                                    textDecoration: 'none',
-                                                    whiteSpace: 'nowrap'
-                                                }}
                                             >
-                                                <span style={{ marginRight: '8px' }}>{link.icon}</span>
-                                                {link.label}
+                                                <link.icon />
+                                                <span>{link.label}</span>
                                             </Link>
                                         ))}
                                     </div>
@@ -126,434 +131,256 @@ export default function Navbar() {
                         )}
                     </div>
 
-                    {user && (
-                        <div className="navbar-user desktop-user">
-                            <ThemeSwitcher />
-                            <Link href="/profile" style={{ textDecoration: 'none' }}>
-                                <div style={{ cursor: 'pointer' }}>
-                                    <div className="navbar-user-name">{user.name}</div>
-                                    <div className="navbar-user-role">
-                                        {getRoleLabel(user.role)}
+                    {/* 右侧操作区 */}
+                    <div className="navbar-actions">
+                        <ThemeSwitcher />
+                        
+                        {user && (
+                            <div ref={userMenuRef} className="dropdown-wrapper">
+                                <button 
+                                    className="user-menu"
+                                    onClick={() => setShowUserMenu(!showUserMenu)}
+                                >
+                                    <div className="user-avatar">
+                                        {user.name?.charAt(0) || '?'}
                                     </div>
-                                </div>
-                            </Link>
-                            <button
-                                className="btn btn-secondary logout-btn"
-                                onClick={handleLogout}
-                            >
-                                退出
-                            </button>
-                        </div>
-                    )}
+                                    <div className="user-info">
+                                        <span className="user-name">{user.name}</span>
+                                        <span className="user-role">{getRoleLabel(user.role)}</span>
+                                    </div>
+                                    <ChevronIcon className={showUserMenu ? 'rotate' : ''} />
+                                </button>
+                                
+                                {showUserMenu && (
+                                    <div className="dropdown-menu user-dropdown">
+                                        <div className="dropdown-user-header">
+                                            <div className="dropdown-avatar">
+                                                {user.name?.charAt(0) || '?'}
+                                            </div>
+                                            <div>
+                                                <div className="dropdown-user-name">{user.name}</div>
+                                                <div className="dropdown-user-role">{getRoleLabel(user.role)}</div>
+                                            </div>
+                                        </div>
+                                        <div className="dropdown-divider" />
+                                        <Link 
+                                            href="/profile" 
+                                            className="dropdown-item"
+                                            onClick={() => setShowUserMenu(false)}
+                                        >
+                                            <UserIcon />
+                                            <span>个人资料</span>
+                                        </Link>
+                                        <div className="dropdown-divider" />
+                                        <button 
+                                            className="dropdown-item danger"
+                                            onClick={handleLogout}
+                                        >
+                                            <LogoutIcon />
+                                            <span>退出登录</span>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* 移动端菜单按钮 */}
+                        <button 
+                            className="mobile-menu-btn"
+                            onClick={() => setShowMobileMenu(!showMobileMenu)}
+                            aria-label="菜单"
+                        >
+                            {showMobileMenu ? <CloseIcon /> : <MenuIcon />}
+                        </button>
+                    </div>
                 </div>
+                
+                {/* 底部发光线 */}
+                <div className="nav-glow-line" />
             </nav>
 
             {/* 移动端侧边菜单 */}
             {showMobileMenu && (
-                <div 
-                    style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'rgba(0, 0, 0, 0.6)',
-                        backdropFilter: 'blur(4px)',
-                        zIndex: 1000
-                    }}
-                    onClick={() => setShowMobileMenu(false)}
-                >
-                    <div 
-                        style={{
-                            position: 'absolute',
-                            top: 0,
-                            right: 0,
-                            width: '280px',
-                            maxWidth: '85%',
-                            height: '100%',
-                            background: 'var(--bg-secondary)',
-                            padding: '20px',
-                            display: 'flex',
-                            flexDirection: 'column'
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
+                <div className="mobile-overlay" onClick={() => setShowMobileMenu(false)}>
+                    <div className="mobile-menu" onClick={(e) => e.stopPropagation()}>
+                        {/* 用户信息 */}
                         {user && (
                             <Link 
                                 href="/profile"
+                                className="mobile-user"
                                 onClick={() => setShowMobileMenu(false)}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '12px',
-                                    paddingBottom: '20px',
-                                    borderBottom: '1px solid var(--border-color)',
-                                    marginBottom: '16px',
-                                    textDecoration: 'none'
-                                }}
                             >
-                                <div style={{
-                                    width: '48px',
-                                    height: '48px',
-                                    borderRadius: '50%',
-                                    background: 'var(--primary)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '20px',
-                                    fontWeight: 600,
-                                    color: 'white'
-                                }}>
+                                <div className="mobile-avatar">
                                     {user.name?.charAt(0) || '?'}
                                 </div>
-                                <div>
-                                    <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                                        {user.name}
-                                    </div>
-                                    <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                                        {getRoleLabel(user.role)} · 点击修改资料
-                                    </div>
+                                <div className="mobile-user-info">
+                                    <span className="mobile-user-name">{user.name}</span>
+                                    <span className="mobile-user-role">{getRoleLabel(user.role)}</span>
                                 </div>
                             </Link>
                         )}
                         
-                        <div style={{ flex: 1, overflowY: 'auto' }}>
-                            {navLinks.map((link) => (
+                        {/* 导航链接 */}
+                        <div className="mobile-nav">
+                            {navLinks.map((link, index) => (
                                 <Link
                                     key={link.href}
                                     href={link.href}
+                                    className={`mobile-link ${pathname === link.href ? 'active' : ''}`}
                                     onClick={() => setShowMobileMenu(false)}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '12px',
-                                        padding: '14px 12px',
-                                        color: pathname === link.href ? 'var(--primary-light)' : 'var(--text-secondary)',
-                                        background: pathname === link.href ? 'var(--bg-tertiary)' : 'transparent',
-                                        borderRadius: 'var(--radius-sm)',
-                                        fontSize: '15px',
-                                        textDecoration: 'none',
-                                        marginBottom: '4px'
-                                    }}
+                                    style={{ animationDelay: `${index * 0.05}s` }}
                                 >
-                                    <span>{link.icon}</span>
-                                    {link.label}
+                                    <link.icon />
+                                    <span>{link.label}</span>
                                 </Link>
                             ))}
                             
                             {isAdmin && (
                                 <>
-                                    <div style={{
-                                        fontSize: '12px',
-                                        color: 'var(--text-muted)',
-                                        padding: '16px 12px 8px',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.5px'
-                                    }}>
-                                        系统管理
-                                    </div>
-                                    {adminLinks.map((link) => (
+                                    <div className="mobile-divider">系统管理</div>
+                                    {adminLinks.map((link, index) => (
                                         <Link
                                             key={link.href}
                                             href={link.href}
+                                            className={`mobile-link ${pathname === link.href ? 'active' : ''}`}
                                             onClick={() => setShowMobileMenu(false)}
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '12px',
-                                                padding: '14px 12px',
-                                                color: pathname === link.href ? 'var(--primary-light)' : 'var(--text-secondary)',
-                                                background: pathname === link.href ? 'var(--bg-tertiary)' : 'transparent',
-                                                borderRadius: 'var(--radius-sm)',
-                                                fontSize: '15px',
-                                                textDecoration: 'none',
-                                                marginBottom: '4px'
-                                            }}
+                                            style={{ animationDelay: `${(navLinks.length + index) * 0.05}s` }}
                                         >
-                                            <span>{link.icon}</span>
-                                            {link.label}
+                                            <link.icon />
+                                            <span>{link.label}</span>
                                         </Link>
                                     ))}
                                 </>
                             )}
                         </div>
 
-                        {/* 移动端主题切换 */}
-                        <div style={{
-                            padding: '16px 0',
-                            borderTop: '1px solid var(--border-color)',
-                            marginTop: '16px'
-                        }}>
-                            <div style={{
-                                fontSize: '12px',
-                                color: 'var(--text-muted)',
-                                marginBottom: '12px',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px'
-                            }}>
-                                主题设置
-                            </div>
+                        {/* 主题切换 */}
+                        <div className="mobile-theme">
+                            <span className="mobile-divider">主题设置</span>
                             <ThemeSwitcher />
                         </div>
 
-                        <button
-                            onClick={() => {
-                                setShowMobileMenu(false);
-                                handleLogout();
-                            }}
-                            style={{
-                                width: '100%',
-                                padding: '14px',
-                                background: 'var(--bg-tertiary)',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: 'var(--radius-md)',
-                                color: 'var(--text-secondary)',
-                                fontSize: '14px',
-                                cursor: 'pointer',
-                                marginTop: '16px'
-                            }}
-                        >
-                            退出登录
+                        {/* 退出按钮 */}
+                        <button className="mobile-logout" onClick={handleLogout}>
+                            <LogoutIcon />
+                            <span>退出登录</span>
                         </button>
                     </div>
                 </div>
             )}
 
-            <style jsx>{`
-                /* 移动端菜单按钮 */
-                .mobile-menu-btn {
-                    display: none;
-                    background: none;
-                    border: none;
-                    font-size: 24px;
-                    color: var(--text-primary);
-                    cursor: pointer;
-                    padding: 8px;
-                    border-radius: var(--radius-sm);
-                    transition: background 0.2s ease;
-                }
-
-                .mobile-menu-btn:hover {
-                    background: var(--bg-tertiary);
-                }
-
-                /* 导航链接样式 */
-                .nav-icon {
-                    margin-right: 6px;
-                }
-
-                .admin-menu-wrapper {
-                    position: relative;
-                }
-
-                .admin-menu-wrapper .navbar-link {
-                    background: none;
-                    border: none;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                }
-
-                .dropdown-arrow {
-                    margin-left: 4px;
-                    font-size: 10px;
-                }
-
-                .admin-dropdown {
-                    position: absolute;
-                    top: 100%;
-                    left: 0;
-                    background: var(--bg-secondary);
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--radius-sm);
-                    min-width: 140px;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                    z-index: 1000;
-                    margin-top: 4px;
-                    display: flex;
-                    flex-direction: column;
-                }
-
-                .admin-dropdown a:last-child {
-                    border-bottom: none !important;
-                }
-
-                .admin-dropdown a:hover {
-                    background: var(--bg-tertiary);
-                    color: var(--text-primary);
-                }
-
-                .logout-btn {
-                    padding: 6px 12px;
-                    font-size: 12px;
-                }
-
-                /* 移动端菜单遮罩 */
-                .mobile-menu-overlay {
-                    display: none;
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(0, 0, 0, 0.6);
-                    backdrop-filter: blur(4px);
-                    z-index: 1000;
-                    animation: fadeIn 0.2s ease;
-                }
-
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-
-                /* 移动端菜单 */
-                .mobile-menu {
-                    position: absolute;
-                    top: 0;
-                    right: 0;
-                    width: 280px;
-                    max-width: 85%;
-                    height: 100%;
-                    background: var(--bg-secondary);
-                    padding: 20px;
-                    display: flex;
-                    flex-direction: column;
-                    animation: slideIn 0.2s ease;
-                }
-
-                @keyframes slideIn {
-                    from { transform: translateX(100%); }
-                    to { transform: translateX(0); }
-                }
-
-                .mobile-user-info {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    padding-bottom: 20px;
-                    border-bottom: 1px solid var(--border-color);
-                    margin-bottom: 16px;
-                }
-
-                .mobile-user-avatar {
-                    width: 48px;
-                    height: 48px;
-                    border-radius: 50%;
-                    background: var(--primary);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 20px;
-                    font-weight: 600;
-                    color: white;
-                }
-
-                .mobile-user-name {
-                    font-size: 16px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                }
-
-                .mobile-user-role {
-                    font-size: 13px;
-                    color: var(--text-muted);
-                }
-
-                .mobile-nav-links {
-                    flex: 1;
-                    overflow-y: auto;
-                }
-
-                .mobile-nav-link {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    padding: 14px 12px;
-                    color: var(--text-secondary);
-                    border-radius: var(--radius-sm);
-                    font-size: 15px;
-                    transition: all 0.2s ease;
-                }
-
-                .mobile-nav-link:hover,
-                .mobile-nav-link.active {
-                    background: var(--bg-tertiary);
-                    color: var(--text-primary);
-                }
-
-                .mobile-nav-link.active {
-                    color: var(--primary-light);
-                }
-
-                .mobile-nav-divider {
-                    font-size: 12px;
-                    color: var(--text-muted);
-                    padding: 16px 12px 8px;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                }
-
-                .mobile-logout-btn {
-                    width: 100%;
-                    padding: 14px;
-                    background: var(--bg-tertiary);
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--radius-md);
-                    color: var(--text-secondary);
-                    font-size: 14px;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                    margin-top: 16px;
-                }
-
-                .mobile-logout-btn:hover {
-                    background: var(--error);
-                    border-color: var(--error);
-                    color: white;
-                }
-
-                /* 响应式 */
-                @media (max-width: 768px) {
-                    .mobile-menu-btn {
-                        display: block;
-                    }
-
-                    .mobile-menu-overlay {
-                        display: block;
-                    }
-
-                    .desktop-nav {
-                        display: none;
-                    }
-
-                    .desktop-user {
-                        display: none;
-                    }
-
-                    .navbar-brand-text {
-                        display: none;
-                    }
-                }
-
-                @media (max-width: 1024px) and (min-width: 769px) {
-                    .nav-label {
-                        display: none;
-                    }
-
-                    .nav-icon {
-                        margin-right: 0;
-                    }
-
-                    .dropdown-arrow {
-                        display: none;
-                    }
-
-                    .navbar-user-role {
-                        display: none;
-                    }
-                }
-            `}</style>
         </>
+    );
+}
+
+// 图标组件
+function DashboardIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+        </svg>
+    );
+}
+
+function RocketIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
+            <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
+            <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
+            <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
+        </svg>
+    );
+}
+
+function UsersIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+    );
+}
+
+function ListIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6" />
+            <line x1="8" y1="12" x2="21" y2="12" />
+            <line x1="8" y1="18" x2="21" y2="18" />
+            <line x1="3" y1="6" x2="3.01" y2="6" />
+            <line x1="3" y1="12" x2="3.01" y2="12" />
+            <line x1="3" y1="18" x2="3.01" y2="18" />
+        </svg>
+    );
+}
+
+function DatabaseIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <ellipse cx="12" cy="5" rx="9" ry="3" />
+            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+        </svg>
+    );
+}
+
+function SettingsIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+            <circle cx="12" cy="12" r="3" />
+        </svg>
+    );
+}
+
+function UserIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+        </svg>
+    );
+}
+
+function LogoutIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+        </svg>
+    );
+}
+
+function MenuIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6" />
+            <line x1="4" y1="12" x2="20" y2="12" />
+            <line x1="4" y1="18" x2="20" y2="18" />
+        </svg>
+    );
+}
+
+function CloseIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+    );
+}
+
+function ChevronIcon({ className }) {
+    return (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
+            <polyline points="6 9 12 15 18 9" />
+        </svg>
     );
 }

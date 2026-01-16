@@ -12,6 +12,7 @@ export default function DashboardPage() {
     const [releases, setReleases] = useState([]);
     const { getRoleLabel } = useRoles();
     const [loading, setLoading] = useState(true);
+    const [mounted, setMounted] = useState(false);
     const [stats, setStats] = useState({
         total: 0,
         inProgress: 0,
@@ -20,7 +21,7 @@ export default function DashboardPage() {
     });
 
     useEffect(() => {
-        // 检查登录状态
+        setMounted(true);
         const token = localStorage.getItem('token');
         const userStr = localStorage.getItem('user');
 
@@ -36,9 +37,7 @@ export default function DashboardPage() {
     const fetchReleases = async (token) => {
         try {
             const res = await fetch('/api/releases', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
+                headers: { 'Authorization': `Bearer ${token}` },
             });
 
             if (res.status === 401) {
@@ -50,7 +49,6 @@ export default function DashboardPage() {
             const releaseList = data.releases || [];
             setReleases(releaseList);
 
-            // 计算统计数据
             setStats({
                 total: releaseList.length,
                 inProgress: releaseList.filter(r => r.status === 'IN_PROGRESS').length,
@@ -68,208 +66,253 @@ export default function DashboardPage() {
         return (
             <>
                 <Navbar />
-                <div className="loading" style={{ minHeight: 'calc(100vh - 64px)' }}>
-                    <div className="loading-spinner"></div>
+                <div className="loading">
+                    <div className="loading-spinner" />
                 </div>
             </>
         );
     }
 
-    // 正在进行的发版
     const activeReleases = releases.filter(r =>
         r.status === 'IN_PROGRESS' || r.status === 'PENDING_REVIEW' || r.status === 'DRAFT'
     );
 
-    // 最近完成的发版
     const recentCompleted = releases.filter(r =>
         r.status === 'SUCCESS' || r.status === 'FAILED'
     ).slice(0, 4);
 
+    const isPM = user?.role?.split(',').includes('PM');
+
     return (
         <>
             <Navbar />
-            <main className="dashboard-page">
+            <main className={`dashboard-page ${mounted ? 'mounted' : ''}`}>
                 <div className="container">
-                    {/* 页面标题 */}
-                    <div className="page-header">
-                        <div>
-                            <h1 className="page-title">
-                                {user?.role === 'PM' ? '项目管理仪表盘' : '我的工作台'}
+                    {/* 欢迎区域 */}
+                    <div className="welcome-section">
+                        <div className="welcome-content">
+                            <div className="welcome-badge">
+                                <span className="badge-dot" />
+                                <span>工作台</span>
+                            </div>
+                            <h1 className="welcome-title">
+                                {getGreeting()}，{user?.name}
                             </h1>
-                            <p className="page-subtitle">
-                                欢迎回来, {user?.name} ({getRoleLabel(user?.role)})
+                            <p className="welcome-subtitle">
+                                {isPM ? '管理你的发版流程，确保每次发布顺利进行' : '查看你参与的发版任务，完成待办事项'}
                             </p>
                         </div>
-                        {user?.role?.split(',').includes('PM') && (
+                        {isPM && (
                             <button
-                                className="btn btn-primary"
+                                className="create-btn"
                                 onClick={() => router.push('/releases/new')}
                             >
-                                ➕ 新建发版
+                                <PlusIcon />
+                                <span>新建发版</span>
                             </button>
                         )}
                     </div>
 
                     {/* 统计卡片 */}
-                    <div className="grid grid-4 stats-grid">
-                        <div className="card stat-card">
-                            <div className="stat-value">{stats.total}</div>
-                            <div className="stat-label">总发版数</div>
-                        </div>
-                        <div className="card stat-card">
-                            <div className="stat-value stat-value-info">
-                                {stats.inProgress}
+                    <div className="stats-grid">
+                        <div className="stat-card" style={{ '--accent': 'var(--primary)' }}>
+                            <div className="stat-icon">
+                                <TotalIcon />
                             </div>
-                            <div className="stat-label">进行中</div>
-                        </div>
-                        <div className="card stat-card">
-                            <div className="stat-value stat-value-success">
-                                {stats.success}
+                            <div className="stat-content">
+                                <span className="stat-value">{stats.total}</span>
+                                <span className="stat-label">总发版数</span>
                             </div>
-                            <div className="stat-label">成功发版</div>
+                            <div className="stat-glow" />
                         </div>
-                        <div className="card stat-card">
-                            <div className="stat-value stat-value-error">
-                                {stats.failed}
+                        
+                        <div className="stat-card" style={{ '--accent': 'var(--info)' }}>
+                            <div className="stat-icon">
+                                <ProgressIcon />
                             </div>
-                            <div className="stat-label">失败/回滚</div>
+                            <div className="stat-content">
+                                <span className="stat-value">{stats.inProgress}</span>
+                                <span className="stat-label">进行中</span>
+                            </div>
+                            <div className="stat-glow" />
+                        </div>
+                        
+                        <div className="stat-card" style={{ '--accent': 'var(--success)' }}>
+                            <div className="stat-icon">
+                                <SuccessIcon />
+                            </div>
+                            <div className="stat-content">
+                                <span className="stat-value">{stats.success}</span>
+                                <span className="stat-label">成功发版</span>
+                            </div>
+                            <div className="stat-glow" />
+                        </div>
+                        
+                        <div className="stat-card" style={{ '--accent': 'var(--error)' }}>
+                            <div className="stat-icon">
+                                <FailedIcon />
+                            </div>
+                            <div className="stat-content">
+                                <span className="stat-value">{stats.failed}</span>
+                                <span className="stat-label">失败/回滚</span>
+                            </div>
+                            <div className="stat-glow" />
                         </div>
                     </div>
 
-                    {/* 正在进行的发版 */}
-                    <section className="dashboard-section">
+                    {/* 进行中的发版 */}
+                    <section className="section">
                         <div className="section-header">
-                            <h2 className="section-title">
-                                🔄 进行中的发版
-                            </h2>
+                            <div className="section-title-wrap">
+                                <div className="section-icon">
+                                    <ActiveIcon />
+                                </div>
+                                <h2 className="section-title">进行中的发版</h2>
+                                <span className="section-count">{activeReleases.length}</span>
+                            </div>
                             <button
-                                className="btn btn-secondary section-btn"
+                                className="view-all-btn"
                                 onClick={() => router.push('/releases')}
                             >
-                                查看全部 →
+                                查看全部
+                                <ArrowRightIcon />
                             </button>
                         </div>
 
                         {activeReleases.length > 0 ? (
-                            <div className="grid grid-3">
-                                {activeReleases.slice(0, 6).map((release) => (
-                                    <ReleaseCard key={release.id} release={release} />
+                            <div className="releases-grid">
+                                {activeReleases.slice(0, 6).map((release, index) => (
+                                    <div 
+                                        key={release.id} 
+                                        className="release-item"
+                                        style={{ animationDelay: `${index * 0.05}s` }}
+                                    >
+                                        <ReleaseCard release={release} />
+                                    </div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="card">
-                                <div className="empty-state">
-                                    <div className="empty-state-icon">🎉</div>
-                                    <div className="empty-state-title">暂无进行中的发版</div>
-                                    <div className="empty-state-text">所有发版都已完成，点击右上角按钮创建新发版</div>
-                                </div>
+                            <div className="empty-card">
+                                <div className="empty-icon">🎉</div>
+                                <h3 className="empty-title">暂无进行中的发版</h3>
+                                <p className="empty-text">所有发版都已完成，点击右上角按钮创建新发版</p>
                             </div>
                         )}
                     </section>
 
                     {/* 最近完成 */}
                     {recentCompleted.length > 0 && (
-                        <section className="dashboard-section">
-                            <h2 className="section-title">
-                                📋 最近完成
-                            </h2>
-                            <div className="grid grid-4">
-                                {recentCompleted.map((release) => (
-                                    <ReleaseCard key={release.id} release={release} />
+                        <section className="section">
+                            <div className="section-header">
+                                <div className="section-title-wrap">
+                                    <div className="section-icon completed">
+                                        <CompletedIcon />
+                                    </div>
+                                    <h2 className="section-title">最近完成</h2>
+                                </div>
+                            </div>
+                            <div className="releases-grid">
+                                {recentCompleted.map((release, index) => (
+                                    <div 
+                                        key={release.id} 
+                                        className="release-item"
+                                        style={{ animationDelay: `${index * 0.05}s` }}
+                                    >
+                                        <ReleaseCard release={release} />
+                                    </div>
                                 ))}
                             </div>
                         </section>
                     )}
                 </div>
-
-                <style jsx>{`
-                    .dashboard-page {
-                        padding: 32px 24px;
-                    }
-
-                    .stats-grid {
-                        margin-bottom: 32px;
-                    }
-
-                    .stat-value-info {
-                        background: linear-gradient(135deg, var(--info) 0%, #60a5fa 100%);
-                        -webkit-background-clip: text;
-                        background-clip: text;
-                    }
-
-                    .stat-value-success {
-                        background: linear-gradient(135deg, var(--success) 0%, #34d399 100%);
-                        -webkit-background-clip: text;
-                        background-clip: text;
-                    }
-
-                    .stat-value-error {
-                        background: linear-gradient(135deg, var(--error) 0%, #f87171 100%);
-                        -webkit-background-clip: text;
-                        background-clip: text;
-                    }
-
-                    .dashboard-section {
-                        margin-bottom: 40px;
-                    }
-
-                    .section-header {
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        margin-bottom: 16px;
-                        gap: 12px;
-                    }
-
-                    .section-title {
-                        font-size: 20px;
-                        font-weight: 700;
-                        margin: 0;
-                    }
-
-                    .section-btn {
-                        padding: 8px 16px;
-                        font-size: 13px;
-                        white-space: nowrap;
-                    }
-
-                    @media (max-width: 768px) {
-                        .dashboard-page {
-                            padding: 16px 12px;
-                        }
-
-                        .stats-grid {
-                            margin-bottom: 24px;
-                        }
-
-                        .dashboard-section {
-                            margin-bottom: 24px;
-                        }
-
-                        .section-header {
-                            flex-direction: column;
-                            align-items: flex-start;
-                            gap: 8px;
-                        }
-
-                        .section-title {
-                            font-size: 18px;
-                        }
-
-                        .section-btn {
-                            width: 100%;
-                            text-align: center;
-                            justify-content: center;
-                        }
-                    }
-
-                    @media (max-width: 480px) {
-                        .section-title {
-                            font-size: 16px;
-                        }
-                    }
-                `}</style>
             </main>
         </>
+    );
+}
+
+// 获取问候语
+function getGreeting() {
+    const hour = new Date().getHours();
+    if (hour < 6) return '夜深了';
+    if (hour < 9) return '早上好';
+    if (hour < 12) return '上午好';
+    if (hour < 14) return '中午好';
+    if (hour < 18) return '下午好';
+    if (hour < 22) return '晚上好';
+    return '夜深了';
+}
+
+
+// 图标组件
+function PlusIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+    );
+}
+
+function TotalIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+            <line x1="12" y1="22.08" x2="12" y2="12" />
+        </svg>
+    );
+}
+
+function ProgressIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+        </svg>
+    );
+}
+
+function SuccessIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
+    );
+}
+
+function FailedIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="15" y1="9" x2="9" y2="15" />
+            <line x1="9" y1="9" x2="15" y2="15" />
+        </svg>
+    );
+}
+
+function ActiveIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        </svg>
+    );
+}
+
+function CompletedIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+            <path d="m9 12 2 2 4-4" />
+        </svg>
+    );
+}
+
+function ArrowRightIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12" />
+            <polyline points="12 5 19 12 12 19" />
+        </svg>
     );
 }

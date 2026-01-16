@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
+import DatePicker from '@/components/DatePicker';
 import toast from 'react-hot-toast';
 import ConfirmModal from '@/components/ConfirmModal';
 
@@ -96,7 +97,6 @@ export default function AdminReleasesPage() {
         const token = localStorage.getItem('token');
 
         try {
-            // 更新基本信息
             const res = await fetch(`/api/releases/${editingRelease.id}`, {
                 method: 'PUT',
                 headers: {
@@ -155,11 +155,35 @@ export default function AdminReleasesPage() {
         }
     };
 
+    // 获取阶段徽章样式
+    const getStageBadgeClass = (stage) => {
+        const styles = {
+            'PREPARATION': 'badge-info',
+            'IMPLEMENTATION': 'badge-warning',
+            'VERIFICATION': 'badge-primary',
+            'COMPLETED': 'badge-success',
+            'ROLLBACK': 'badge-danger',
+        };
+        return styles[stage] || 'badge-secondary';
+    };
+
+    // 获取状态徽章样式
+    const getStatusBadgeClass = (status) => {
+        const styles = {
+            'DRAFT': 'badge-secondary',
+            'PENDING_REVIEW': 'badge-warning',
+            'IN_PROGRESS': 'badge-info',
+            'SUCCESS': 'badge-success',
+            'FAILED': 'badge-danger',
+        };
+        return styles[status] || 'badge-secondary';
+    };
+
     if (loading) {
         return (
             <>
                 <Navbar />
-                <div className="loading" style={{ minHeight: 'calc(100vh - 64px)' }}>
+                <div className="loading">
                     <div className="loading-spinner"></div>
                 </div>
             </>
@@ -169,162 +193,148 @@ export default function AdminReleasesPage() {
     return (
         <>
             <Navbar />
-            <main className="admin-releases-page">
-                <div className="container">
+            <main className="page-container">
+                <div className="container" style={{ maxWidth: '1400px' }}>
+                    {/* 页面头部 */}
                     <div className="page-header">
-                        <div>
-                            <h1 className="page-title">发版记录管理</h1>
-                            <p className="page-subtitle">管理所有发版记录（共 {releases.length} 条）</p>
+                        <div className="page-header-content">
+                            <div className="page-header-icon">📋</div>
+                            <div>
+                                <h1 className="page-title">发版记录管理</h1>
+                                <p className="page-subtitle">
+                                    管理所有发版记录 · 共 <span className="text-glow">{releases.length}</span> 条
+                                </p>
+                            </div>
                         </div>
-                        <button
-                            className="btn btn-primary"
-                            onClick={() => router.push('/releases/new')}
-                        >
-                            ➕ 新建发版
-                        </button>
+                        <div className="page-header-actions">
+                            <button
+                                className="btn btn-primary"
+                                onClick={() => router.push('/releases/new')}
+                            >
+                                ➕ 新建发版
+                            </button>
+                        </div>
                     </div>
 
-                    {/* 桌面端表格视图 */}
-                    <div className="card desktop-table">
-                        <div className="table-container">
-                            <table className="table">
-                                <thead>
+                    {/* 发版列表 */}
+                    <div className="table-container">
+                        <table className="table admin-table">
+                            <thead>
+                                <tr>
+                                    <th>版本号</th>
+                                    <th>描述</th>
+                                    <th>阶段</th>
+                                    <th>状态</th>
+                                    <th>计划日期</th>
+                                    <th>创建人</th>
+                                    <th>创建时间</th>
+                                    <th className="text-right">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {releases.length === 0 ? (
                                     <tr>
-                                        <th>版本号</th>
-                                        <th>描述</th>
-                                        <th>阶段</th>
-                                        <th>状态</th>
-                                        <th>计划日期</th>
-                                        <th>创建人</th>
-                                        <th>创建时间</th>
-                                        <th className="text-right">操作</th>
+                                        <td colSpan={8}>
+                                            <div className="empty-state">
+                                                <div className="empty-icon">📋</div>
+                                                <h3>暂无发版记录</h3>
+                                                <p>点击"新建发版"创建第一个发版</p>
+                                            </div>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    {releases.map((release) => (
-                                        <tr key={release.id}>
-                                            <td style={{ fontWeight: 500 }}>{release.version}</td>
-                                            <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                {release.description}
+                                ) : (
+                                    releases.map((release, index) => (
+                                        <tr key={release.id} style={{ animationDelay: `${index * 0.03}s` }}>
+                                            <td>
+                                                <span 
+                                                    className="version-link"
+                                                    onClick={() => router.push(`/releases/${release.id}`)}
+                                                >
+                                                    {release.version}
+                                                </span>
                                             </td>
                                             <td>
-                                                <span className={`badge ${
-                                                    release.stage === 'COMPLETED' ? 'badge-success' :
-                                                    release.stage === 'ROLLBACK' ? 'badge-danger' : 'badge-info'
-                                                }`}>
+                                                <span className="desc-cell" title={release.description}>
+                                                    {release.description}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span className={`badge ${getStageBadgeClass(release.stage)}`}>
                                                     {STAGE_LABELS[release.stage]}
                                                 </span>
                                             </td>
                                             <td>
-                                                <span className={`badge ${
-                                                    release.status === 'SUCCESS' ? 'badge-success' :
-                                                    release.status === 'FAILED' ? 'badge-danger' :
-                                                    release.status === 'IN_PROGRESS' ? 'badge-warning' : 'badge-secondary'
-                                                }`}>
+                                                <span className={`badge ${getStatusBadgeClass(release.status)}`}>
                                                     {STATUS_LABELS[release.status]}
                                                 </span>
                                             </td>
-                                            <td style={{ fontSize: '13px' }}>
-                                                {release.plannedDate ? new Date(release.plannedDate).toLocaleDateString('zh-CN') : '-'}
+                                            <td>
+                                                <span className="text-muted text-sm">
+                                                    {release.plannedDate 
+                                                        ? new Date(release.plannedDate).toLocaleDateString('zh-CN') 
+                                                        : '-'}
+                                                </span>
                                             </td>
-                                            <td>{release.createdBy?.name}</td>
-                                            <td style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                                                {new Date(release.createdAt).toLocaleDateString('zh-CN')}
+                                            <td>
+                                                <div className="creator-cell">
+                                                    <span className="creator-avatar">
+                                                        {(release.createdBy?.name || '?')[0]}
+                                                    </span>
+                                                    <span>{release.createdBy?.name}</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className="text-muted text-sm">
+                                                    {new Date(release.createdAt).toLocaleDateString('zh-CN')}
+                                                </span>
                                             </td>
                                             <td className="text-right">
-                                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                                <div className="action-buttons">
                                                     <button
-                                                        className="btn btn-secondary"
-                                                        style={{ padding: '6px 12px', fontSize: '12px' }}
+                                                        className="btn btn-sm btn-ghost"
                                                         onClick={() => router.push(`/releases/${release.id}`)}
                                                     >
-                                                        查看
+                                                        👁️ 查看
                                                     </button>
                                                     <button
-                                                        className="btn btn-secondary"
-                                                        style={{ padding: '6px 12px', fontSize: '12px' }}
+                                                        className="btn btn-sm btn-ghost"
                                                         onClick={() => startEdit(release)}
                                                     >
-                                                        编辑
+                                                        ✏️ 编辑
                                                     </button>
                                                     <button
-                                                        className="btn btn-danger"
-                                                        style={{ padding: '6px 12px', fontSize: '12px' }}
+                                                        className="btn btn-sm btn-ghost btn-danger-ghost"
                                                         onClick={() => handleDelete(release)}
                                                     >
-                                                        删除
+                                                        🗑️ 删除
                                                     </button>
                                                 </div>
                                             </td>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {/* 移动端卡片视图 */}
-                    <div className="mobile-cards">
-                        {releases.map((release) => (
-                            <div key={release.id} className="card release-card-mobile">
-                                <div className="release-card-mobile-header">
-                                    <div className="release-card-mobile-title">{release.version}</div>
-                                    <div className="release-card-mobile-badges">
-                                        <span className={`badge ${
-                                            release.stage === 'COMPLETED' ? 'badge-success' :
-                                            release.stage === 'ROLLBACK' ? 'badge-danger' : 'badge-info'
-                                        }`}>
-                                            {STAGE_LABELS[release.stage]}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="release-card-mobile-desc">{release.description}</div>
-                                <div className="release-card-mobile-meta">
-                                    <span>📅 {release.plannedDate ? new Date(release.plannedDate).toLocaleDateString('zh-CN') : '未设置'}</span>
-                                    <span>👤 {release.createdBy?.name}</span>
-                                </div>
-                                <div className="release-card-mobile-actions">
-                                    <button
-                                        className="btn btn-secondary"
-                                        onClick={() => router.push(`/releases/${release.id}`)}
-                                    >
-                                        查看
-                                    </button>
-                                    <button
-                                        className="btn btn-secondary"
-                                        onClick={() => startEdit(release)}
-                                    >
-                                        编辑
-                                    </button>
-                                    <button
-                                        className="btn btn-danger"
-                                        onClick={() => handleDelete(release)}
-                                    >
-                                        删除
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
                 {/* 编辑弹窗 */}
                 {editingRelease && (
-                    <div className="modal-overlay">
-                        <div className="card modal-card">
-                            <div className="card-header">
-                                <h3 className="card-title">编辑发版信息</h3>
-                                <button
-                                    onClick={() => setEditingRelease(null)}
-                                    className="modal-close-btn"
-                                >
-                                    ×
-                                </button>
+                    <div className="modal-overlay" onClick={() => setEditingRelease(null)}>
+                        <div className="modal modal-md" onClick={e => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <h3 className="modal-title">
+                                    <span className="modal-icon">✏️</span>
+                                    编辑发版信息
+                                </h3>
+                                <button className="modal-close" onClick={() => setEditingRelease(null)}>×</button>
                             </div>
 
-                            <form onSubmit={handleUpdate}>
+                            <form onSubmit={handleUpdate} className="modal-body">
                                 <div className="form-group">
-                                    <label className="form-label">版本号</label>
+                                    <label className="form-label">
+                                        版本号 <span className="required">*</span>
+                                    </label>
                                     <input
                                         type="text"
                                         className="form-input"
@@ -334,7 +344,9 @@ export default function AdminReleasesPage() {
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label">描述</label>
+                                    <label className="form-label">
+                                        描述 <span className="required">*</span>
+                                    </label>
                                     <textarea
                                         className="form-input"
                                         rows={3}
@@ -345,22 +357,19 @@ export default function AdminReleasesPage() {
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">计划发版日期</label>
-                                    <input
-                                        type="date"
-                                        className="form-input"
+                                    <DatePicker
                                         value={editForm.plannedDate}
-                                        onChange={(e) => setEditForm({ ...editForm, plannedDate: e.target.value })}
+                                        onChange={value => setEditForm({ ...editForm, plannedDate: value })}
+                                        placeholder="选择计划日期"
                                     />
                                 </div>
 
-                                <div className="modal-actions">
-                                    <button type="submit" className="btn btn-primary">保存</button>
-                                    <button
-                                        type="button"
-                                        className="btn btn-secondary"
-                                        onClick={() => setEditingRelease(null)}
-                                    >
+                                <div className="modal-footer">
+                                    <button type="button" className="btn btn-secondary" onClick={() => setEditingRelease(null)}>
                                         取消
+                                    </button>
+                                    <button type="submit" className="btn btn-primary">
+                                        保存修改
                                     </button>
                                 </div>
                             </form>
@@ -373,139 +382,6 @@ export default function AdminReleasesPage() {
                     onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
                     {...confirmConfig}
                 />
-
-                <style jsx>{`
-                    .admin-releases-page {
-                        padding: 32px 24px;
-                    }
-
-                    .admin-releases-page .container {
-                        max-width: 1200px;
-                    }
-
-                    .mobile-cards {
-                        display: none;
-                    }
-
-                    .modal-overlay {
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        right: 0;
-                        bottom: 0;
-                        background: rgba(0,0,0,0.7);
-                        backdrop-filter: blur(4px);
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        z-index: 1000;
-                        padding: 16px;
-                    }
-
-                    .modal-card {
-                        width: 500px;
-                        max-width: 100%;
-                        max-height: 90vh;
-                        overflow-y: auto;
-                    }
-
-                    .modal-close-btn {
-                        background: none;
-                        border: none;
-                        color: var(--text-muted);
-                        cursor: pointer;
-                        font-size: 20px;
-                        padding: 4px 8px;
-                    }
-
-                    .modal-close-btn:hover {
-                        color: var(--text-primary);
-                    }
-
-                    .modal-actions {
-                        display: flex;
-                        gap: 10px;
-                        margin-top: 24px;
-                    }
-
-                    .modal-actions .btn {
-                        flex: 1;
-                    }
-
-                    /* 移动端卡片样式 */
-                    .release-card-mobile {
-                        margin-bottom: 12px;
-                    }
-
-                    .release-card-mobile-header {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: flex-start;
-                        gap: 12px;
-                        margin-bottom: 8px;
-                    }
-
-                    .release-card-mobile-title {
-                        font-size: 16px;
-                        font-weight: 600;
-                        color: var(--text-primary);
-                    }
-
-                    .release-card-mobile-badges {
-                        display: flex;
-                        gap: 4px;
-                        flex-shrink: 0;
-                    }
-
-                    .release-card-mobile-desc {
-                        font-size: 13px;
-                        color: var(--text-secondary);
-                        margin-bottom: 12px;
-                        display: -webkit-box;
-                        -webkit-line-clamp: 2;
-                        -webkit-box-orient: vertical;
-                        overflow: hidden;
-                    }
-
-                    .release-card-mobile-meta {
-                        display: flex;
-                        gap: 16px;
-                        font-size: 12px;
-                        color: var(--text-muted);
-                        margin-bottom: 12px;
-                    }
-
-                    .release-card-mobile-actions {
-                        display: flex;
-                        gap: 8px;
-                        padding-top: 12px;
-                        border-top: 1px solid var(--border-color);
-                    }
-
-                    .release-card-mobile-actions .btn {
-                        flex: 1;
-                        padding: 8px 12px;
-                        font-size: 12px;
-                    }
-
-                    @media (max-width: 768px) {
-                        .admin-releases-page {
-                            padding: 16px 12px;
-                        }
-
-                        .desktop-table {
-                            display: none;
-                        }
-
-                        .mobile-cards {
-                            display: block;
-                        }
-
-                        .modal-card {
-                            width: 100%;
-                        }
-                    }
-                `}</style>
             </main>
         </>
     );

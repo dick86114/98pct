@@ -3,22 +3,34 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
+import DatePicker from '@/components/DatePicker';
 import toast from 'react-hot-toast';
+
+// 角色标签映射
+const ROLE_LABELS = {
+    PM: '项目经理',
+    RD: '开发',
+    QA: '测试',
+    PO: '产品',
+    DBA: 'DBA',
+    OP: '运维'
+};
 
 export default function NewReleasePage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
 
-    // User & Permissions
+    // 用户与权限
     const [user, setUser] = useState(null);
     const [allUsers, setAllUsers] = useState([]);
+    // selectedMembers 改为对象数组: [{ userId: number, role: string }]
     const [selectedMembers, setSelectedMembers] = useState([]);
 
-    // Form
+    // 表单数据
     const [formData, setFormData] = useState({
         version: '',
         description: '',
-        plannedDate: new Date().toISOString().split('T')[0], // Default today
+        plannedDate: new Date().toISOString().split('T')[0],
     });
 
     useEffect(() => {
@@ -47,7 +59,6 @@ export default function NewReleasePage() {
 
     const fetchAllUsers = async (token) => {
         try {
-            // 添加 forRelease=true 参数，让 PM 可以获取用户列表用于选择成员
             const res = await fetch('/api/users?forRelease=true', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -66,6 +77,12 @@ export default function NewReleasePage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        if (selectedMembers.length === 0) {
+            toast.error('请至少选择一名参与人员');
+            return;
+        }
+        
         setLoading(true);
 
         try {
@@ -78,7 +95,8 @@ export default function NewReleasePage() {
                 },
                 body: JSON.stringify({
                     ...formData,
-                    memberIds: selectedMembers
+                    // 传递成员及其在该发版中的角色
+                    members: selectedMembers
                 }),
             });
 
@@ -98,15 +116,40 @@ export default function NewReleasePage() {
         }
     };
 
+    // 获取角色显示
+    const getRoleDisplay = (roleStr) => {
+        return (roleStr || '').split(',')
+            .filter(r => r && r !== 'ADMIN')
+            .map(r => ROLE_LABELS[r] || r)
+            .join(' / ');
+    };
+
+    // 获取角色徽章样式
+    const getRoleBadgeClass = (role) => {
+        const styles = {
+            'PM': 'badge-primary',
+            'RD': 'badge-info',
+            'QA': 'badge-success',
+            'PO': 'badge-warning',
+            'DBA': 'badge-secondary',
+            'OP': 'badge-tertiary',
+        };
+        return styles[role] || 'badge-secondary';
+    };
+
     return (
         <>
             <Navbar />
-            <main style={{ padding: '32px 24px' }}>
-                <div className="container" style={{ maxWidth: '800px' }}>
+            <main className="page-container">
+                <div className="container" style={{ maxWidth: '900px' }}>
+                    {/* 页面头部 */}
                     <div className="page-header">
-                        <div>
-                            <h1 className="page-title">新建发版申请</h1>
-                            <p className="page-subtitle">仅填写基本信息，详细变更内容请在详情页填报</p>
+                        <div className="page-header-content">
+                            <div className="page-header-icon">🚀</div>
+                            <div>
+                                <h1 className="page-title">新建发版申请</h1>
+                                <p className="page-subtitle">填写基本信息并选择参与人员，详细变更内容请在详情页填报</p>
+                            </div>
                         </div>
                         <button
                             className="btn btn-secondary"
@@ -116,16 +159,21 @@ export default function NewReleasePage() {
                         </button>
                     </div>
 
-                    <div className="card">
-                        <form onSubmit={handleSubmit}>
-                            {/* 基本信息 */}
-                            <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px', color: 'var(--primary-light)' }}>
-                                📋 基本信息
-                            </h3>
+                    <form onSubmit={handleSubmit}>
+                        {/* 基本信息卡片 */}
+                        <div className="card-static">
+                            <div className="card-header">
+                                <h3 className="card-title">
+                                    <span className="title-icon">📋</span>
+                                    基本信息
+                                </h3>
+                            </div>
 
-                            <div className="grid grid-2">
+                            <div className="form-grid">
                                 <div className="form-group">
-                                    <label className="form-label">版本号 *</label>
+                                    <label className="form-label">
+                                        版本号 <span className="required">*</span>
+                                    </label>
                                     <input
                                         type="text"
                                         className="form-input"
@@ -134,105 +182,168 @@ export default function NewReleasePage() {
                                         onChange={(e) => setFormData({ ...formData, version: e.target.value })}
                                         required
                                     />
+                                    <span className="form-hint">建议使用语义化版本号</span>
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">计划发版日期</label>
-                                    <input
-                                        type="date"
-                                        className="form-input"
+                                    <DatePicker
                                         value={formData.plannedDate}
-                                        onChange={(e) => setFormData({ ...formData, plannedDate: e.target.value })}
-                                        style={{
-                                            appearance: 'none',
-                                            position: 'relative',
-                                            paddingRight: '30px'
-                                        }}
+                                        onChange={value => setFormData({ ...formData, plannedDate: value })}
+                                        placeholder="选择计划日期"
                                     />
                                 </div>
                             </div>
 
                             <div className="form-group">
-                                <label className="form-label">发版描述 *</label>
+                                <label className="form-label">
+                                    发版描述 <span className="required">*</span>
+                                </label>
                                 <textarea
-                                    className="form-textarea"
-                                    placeholder="简要描述本次发版的主要内容和目的"
+                                    className="form-input"
+                                    placeholder="简要描述本次发版的主要内容和目的..."
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                     required
-                                    rows={3}
+                                    rows={4}
                                 />
                             </div>
+                        </div>
 
-                            {/* 人员选择 */}
-                            <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px', marginTop: '32px', color: 'var(--primary-light)' }}>
-                                👥 参与人员选择
-                            </h3>
-                            <div className="form-group">
-                                <label className="form-label">选择涉及本次发版的人员 (RD, QA, OP, DBA等) *</label>
-                                <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                                    gap: '12px',
-                                    maxHeight: '300px',
-                                    overflowY: 'auto',
-                                    padding: '12px',
-                                    backgroundColor: 'var(--bg-tertiary)',
-                                    borderRadius: 'var(--radius-md)',
-                                    border: '1px solid var(--border-color)'
-                                }}>
-                                    {allUsers.filter(u => u.id !== user?.id).map(u => (
-                                        <div
-                                            key={u.id}
-                                            onClick={() => {
-                                                if (selectedMembers.includes(u.id)) {
-                                                    setSelectedMembers(selectedMembers.filter(id => id !== u.id));
-                                                } else {
-                                                    setSelectedMembers([...selectedMembers, u.id]);
-                                                }
-                                            }}
-                                            style={{
-                                                padding: '10px',
-                                                borderRadius: 'var(--radius-sm)',
-                                                border: `1px solid ${selectedMembers.includes(u.id) ? 'var(--primary)' : 'transparent'}`,
-                                                backgroundColor: selectedMembers.includes(u.id) ? 'rgba(52, 120, 246, 0.1)' : 'var(--bg-secondary)',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                transition: 'all 0.2s'
-                                            }}
-                                        >
-                                            <div style={{ fontWeight: 600, fontSize: '14px' }}>{u.name}</div>
-                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{u.role}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                                {selectedMembers.length === 0 && (
-                                    <p style={{ fontSize: '12px', color: 'var(--error)', marginTop: '8px' }}>
-                                        请至少选择一名参与人员
-                                    </p>
+                        {/* 人员选择卡片 */}
+                        <div className="card-static">
+                            <div className="card-header">
+                                <h3 className="card-title">
+                                    <span className="title-icon">👥</span>
+                                    参与人员
+                                </h3>
+                                <span className="selected-count">
+                                    已选择 <span className="count-num">{selectedMembers.length}</span> 人
+                                </span>
+                            </div>
+
+                            <p className="card-desc" style={{ marginBottom: '16px' }}>
+                                选择涉及本次发版的人员（RD、QA、OP、DBA 等）
+                            </p>
+
+                            <div className="member-selector">
+                                {allUsers.filter(u => u.id !== user?.id).length === 0 ? (
+                                    <div className="empty-state-sm">
+                                        <span className="empty-icon">👤</span>
+                                        <span>暂无可选人员</span>
+                                    </div>
+                                ) : (
+                                    <div className="member-grid">
+                                        {allUsers.filter(u => u.id !== user?.id).map(u => {
+                                            const memberEntry = selectedMembers.find(m => m.userId === u.id);
+                                            const isSelected = !!memberEntry;
+                                            const roles = (u.role || '').split(',').filter(r => r && r !== 'ADMIN');
+                                            return (
+                                                <div
+                                                    key={u.id}
+                                                    className={`member-option ${isSelected ? 'selected' : ''}`}
+                                                >
+                                                    <div 
+                                                        className="member-option-main"
+                                                        onClick={() => {
+                                                            if (isSelected) {
+                                                                // 取消选择
+                                                                setSelectedMembers(selectedMembers.filter(m => m.userId !== u.id));
+                                                            } else {
+                                                                // 选择成员，默认使用第一个非 ADMIN 角色
+                                                                const defaultRole = roles[0] || 'RD';
+                                                                setSelectedMembers([...selectedMembers, { userId: u.id, role: defaultRole }]);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <div className="member-option-checkbox">
+                                                            {isSelected && <span>✓</span>}
+                                                        </div>
+                                                        <div className="member-option-avatar">
+                                                            {(u.name || '?')[0]}
+                                                        </div>
+                                                        <div className="member-option-info">
+                                                            <span className="member-option-name">{u.name}</span>
+                                                            <div className="member-option-roles">
+                                                                {roles.slice(0, 2).map(role => (
+                                                                    <span 
+                                                                        key={role} 
+                                                                        className={`badge badge-sm ${getRoleBadgeClass(role)}`}
+                                                                    >
+                                                                        {ROLE_LABELS[role] || role}
+                                                                    </span>
+                                                                ))}
+                                                                {roles.length > 2 && (
+                                                                    <span className="badge badge-sm badge-secondary">
+                                                                        +{roles.length - 2}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    {/* 角色选择下拉框 - 仅当选中且有多个角色时显示 */}
+                                                    {isSelected && roles.length > 1 && (
+                                                        <div className="member-role-select">
+                                                            <label>参与角色：</label>
+                                                            <select
+                                                                value={memberEntry.role}
+                                                                onChange={(e) => {
+                                                                    setSelectedMembers(selectedMembers.map(m => 
+                                                                        m.userId === u.id ? { ...m, role: e.target.value } : m
+                                                                    ));
+                                                                }}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                {roles.map(role => (
+                                                                    <option key={role} value={role}>
+                                                                        {ROLE_LABELS[role] || role}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 )}
                             </div>
 
-                            {/* 提交按钮 */}
-                            <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
-                                <button
-                                    type="submit"
-                                    className="btn btn-primary"
-                                    disabled={loading}
-                                    style={{ flex: 1 }}
-                                >
-                                    {loading ? '提交中...' : '🚀 创建发版申请'}
-                                </button>
-                                <button
-                                    type="button"
-                                    className="btn btn-secondary"
-                                    onClick={() => router.back()}
-                                >
-                                    取消
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+                            {selectedMembers.length === 0 && (
+                                <div className="warning-hint">
+                                    <span className="warning-icon">⚠️</span>
+                                    <span>请至少选择一名参与人员</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 提交按钮 */}
+                        <div className="submit-section">
+                            <button
+                                type="button"
+                                className="btn btn-secondary btn-lg"
+                                onClick={() => router.back()}
+                            >
+                                取消
+                            </button>
+                            <button
+                                type="submit"
+                                className="btn btn-primary btn-glow btn-lg"
+                                disabled={loading || selectedMembers.length === 0}
+                            >
+                                {loading ? (
+                                    <>
+                                        <span className="loading-spinner-sm"></span>
+                                        提交中...
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="btn-icon">✨</span>
+                                        创建发版申请
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </main>
         </>

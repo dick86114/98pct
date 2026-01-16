@@ -20,12 +20,12 @@ export async function GET(request, { params }) {
             where: { id: releaseId },
             include: {
                 createdBy: {
-                    select: { id: true, name: true, role: true, email: true },
+                    select: { id: true, name: true, role: true, email: true, username: true, phone: true },
                 },
                 members: {
                     include: {
                         user: {
-                            select: { id: true, name: true, role: true, email: true }
+                            select: { id: true, name: true, role: true, email: true, username: true, phone: true }
                         },
                         content: {
                             include: {
@@ -105,10 +105,14 @@ export async function PUT(request, { params }) {
         const isAdmin = userRoles.includes('ADMIN');
         const isPM = userRoles.includes('PM');
         const isRD = userRoles.includes('RD');
+        const isCreator = existing.createdById === decoded.userId;
+        
+        // PM 只能管理自己创建的发版记录（除非是 ADMIN）
+        const canManageRelease = isAdmin || (isPM && isCreator);
 
-        // ACTION: ADVANCE_STAGE (ADMIN or PM Only)
+        // ACTION: ADVANCE_STAGE (ADMIN 或创建者 PM)
         if (data.action === 'advance_stage') {
-            if (!isAdmin && !isPM) return NextResponse.json({ error: '只有管理员或项目经理可以推进阶段' }, { status: 403 });
+            if (!canManageRelease) return NextResponse.json({ error: '只有管理员或发版创建者可以推进阶段' }, { status: 403 });
 
             // 检查当前阶段的所有检查项是否完成
             const currentStageChecklists = existing.checklists.filter(
@@ -168,9 +172,9 @@ export async function PUT(request, { params }) {
             return NextResponse.json({ message: '阶段推进成功', release });
         }
 
-        // ACTION: ROLLBACK (ADMIN or PM Only)
+        // ACTION: ROLLBACK (ADMIN 或创建者 PM)
         if (data.action === 'rollback') {
-            if (!isAdmin && !isPM) return NextResponse.json({ error: '只有管理员或项目经理可以标记回滚' }, { status: 403 });
+            if (!canManageRelease) return NextResponse.json({ error: '只有管理员或发版创建者可以标记回滚' }, { status: 403 });
 
             const release = await prisma.release.update({
                 where: { id: releaseId },
@@ -179,9 +183,9 @@ export async function PUT(request, { params }) {
             return NextResponse.json({ message: '已标记为回滚', release });
         }
 
-        // ACTION: UPDATE_INFO (ADMIN or PM Only - Version, Desc, Date)
+        // ACTION: UPDATE_INFO (ADMIN 或创建者 PM - Version, Desc, Date)
         if (data.action === 'update_info') {
-            if (!isAdmin && !isPM) return NextResponse.json({ error: '只有管理员或项目经理可以修改发版信息' }, { status: 403 });
+            if (!canManageRelease) return NextResponse.json({ error: '只有管理员或发版创建者可以修改发版信息' }, { status: 403 });
 
             const { version, description, plannedDate } = data;
             if (!version || !description) return NextResponse.json({ error: '版本和描述不能为空' }, { status: 400 });
@@ -203,13 +207,13 @@ export async function PUT(request, { params }) {
             return NextResponse.json({ message: '信息更新成功', release });
         }
 
-        // ACTION: UPDATE_CONTENT (RD, PM - Basic Info, DB Changes, Config Changes)
+        // ACTION: UPDATE_CONTENT (RD, 或创建者 PM - Basic Info, DB Changes, Config Changes)
         if (data.action === 'update_content') {
-            const canEdit = isPM || isRD;
+            const canEdit = canManageRelease || isRD;
             if (!canEdit) return NextResponse.json({ error: '无权修改发版填报内容' }, { status: 403 });
 
-            if (!isPM && existing.stage !== 'PREPARATION' && existing.stage !== 'DRAFT') {
-                return NextResponse.json({ error: '非准备阶段仅PM可修改内容' }, { status: 403 });
+            if (!canManageRelease && existing.stage !== 'PREPARATION' && existing.stage !== 'DRAFT') {
+                return NextResponse.json({ error: '非准备阶段仅发版创建者可修改内容' }, { status: 403 });
             }
 
             const { devName, devPhone, system, contentDesc, dbChanges, configChanges } = data;
@@ -343,7 +347,7 @@ export async function PUT(request, { params }) {
             const isPO = userRoles.includes('PO');
             if (!isPO && !isPM) return NextResponse.json({ error: '无权修改验收信息' }, { status: 403 });
 
-            const { poName, poPhone, poAcceptDate } = data;
+            const { poName, poPhone, poAcceptDate, poAcceptComment } = data;
 
             const member = await prisma.releaseMember.findUnique({
                 where: {
@@ -365,11 +369,13 @@ export async function PUT(request, { params }) {
                     poName,
                     poPhone,
                     poAcceptDate: poAcceptDate ? new Date(poAcceptDate) : null,
+                    poAcceptComment,
                 },
                 update: {
                     poName,
                     poPhone,
                     poAcceptDate: poAcceptDate ? new Date(poAcceptDate) : null,
+                    poAcceptComment,
                 }
             });
 
@@ -381,7 +387,7 @@ export async function PUT(request, { params }) {
             const isDBA = userRoles.includes('DBA');
             if (!isDBA && !isPM) return NextResponse.json({ error: '无权修改审核信息' }, { status: 403 });
 
-            const { dbaName, dbaPhone, dbaReviewDate } = data;
+            const { dbaName, dbaPhone, dbaReviewDate, dbaReviewComment } = data;
 
             const member = await prisma.releaseMember.findUnique({
                 where: {
@@ -403,11 +409,13 @@ export async function PUT(request, { params }) {
                     dbaName,
                     dbaPhone,
                     dbaReviewDate: dbaReviewDate ? new Date(dbaReviewDate) : null,
+                    dbaReviewComment,
                 },
                 update: {
                     dbaName,
                     dbaPhone,
                     dbaReviewDate: dbaReviewDate ? new Date(dbaReviewDate) : null,
+                    dbaReviewComment,
                 }
             });
 
@@ -537,9 +545,9 @@ export async function PUT(request, { params }) {
             return NextResponse.json({ message: '检查清单更新成功' });
         }
 
-        // Action: update_members (ADMIN or PM Only)
+        // Action: update_members (ADMIN 或创建者 PM)
         if (data.action === 'update_members') {
-            if (!isAdmin && !isPM) return NextResponse.json({ error: '只有管理员或项目经理可以修改成员' }, { status: 403 });
+            if (!canManageRelease) return NextResponse.json({ error: '只有管理员或发版创建者可以修改成员' }, { status: 403 });
             const { memberIds } = data;
 
             // Re-sync members: delete old, create new
@@ -561,7 +569,7 @@ export async function PUT(request, { params }) {
     }
 }
 
-// 删除发版记录（ADMIN 或 PM）
+// 删除发版记录（ADMIN 可删除所有，PM 只能删除自己创建的）
 export async function DELETE(request, { params }) {
     try {
         const decoded = getUserFromRequest(request);
@@ -587,6 +595,11 @@ export async function DELETE(request, { params }) {
 
         if (!existing) {
             return NextResponse.json({ error: '发版记录不存在' }, { status: 404 });
+        }
+
+        // PM 只能删除自己创建的发版记录
+        if (isPM && !isAdmin && existing.createdById !== decoded.userId) {
+            return NextResponse.json({ error: '您只能删除自己创建的发版记录' }, { status: 403 });
         }
 
         // 删除关联数据（按顺序删除以避免外键约束）

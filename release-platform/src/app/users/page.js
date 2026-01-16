@@ -25,7 +25,7 @@ export default function UsersPage() {
         name: '',
         email: '',
         phone: '',
-        password: '', // 可选，仅当修改密码时填写
+        password: '',
     });
     const [editSelectedRoles, setEditSelectedRoles] = useState([]);
 
@@ -78,7 +78,6 @@ export default function UsersPage() {
             phone: user.phone || '',
             password: '',
         });
-        // 将 user.role (string) 解析为 array
         setEditSelectedRoles((user.role || '').split(',').filter(r => r));
     };
 
@@ -100,7 +99,7 @@ export default function UsersPage() {
                 name: editForm.name,
                 email: editForm.email,
                 phone: editForm.phone,
-                role: editSelectedRoles, // Send array
+                role: editSelectedRoles,
             };
             if (editForm.password) body.password = editForm.password;
 
@@ -116,7 +115,6 @@ export default function UsersPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || '更新失败');
 
-            // 刷新列表
             fetchUsers(token);
             setEditingUser(null);
             toast.success('更新成功');
@@ -181,7 +179,6 @@ export default function UsersPage() {
         const users = [];
 
         for (const line of lines) {
-            // 支持多种分隔符：逗号、制表符
             const parts = line.split(/[,\t]+/).map(p => p.trim());
             if (parts.length >= 5) {
                 users.push({
@@ -190,7 +187,7 @@ export default function UsersPage() {
                     email: parts[2],
                     phone: parts[3],
                     role: parts[4],
-                    password: parts[5] || '123456', // 默认密码
+                    password: parts[5] || '123456',
                 });
             }
         }
@@ -249,11 +246,25 @@ export default function UsersPage() {
         }
     };
 
+    // 获取角色徽章样式
+    const getRoleBadgeClass = (role) => {
+        const roleStyles = {
+            'ADMIN': 'badge-danger',
+            'PM': 'badge-primary',
+            'RD': 'badge-info',
+            'QA': 'badge-success',
+            'PO': 'badge-warning',
+            'DBA': 'badge-purple',
+            'OP': 'badge-cyan'
+        };
+        return roleStyles[role] || 'badge-secondary';
+    };
+
     if (loading) {
         return (
             <>
                 <Navbar />
-                <div className="loading" style={{ minHeight: 'calc(100vh - 64px)' }}>
+                <div className="loading">
                     <div className="loading-spinner"></div>
                 </div>
             </>
@@ -263,14 +274,20 @@ export default function UsersPage() {
     return (
         <>
             <Navbar />
-            <main style={{ padding: '32px 24px' }}>
-                <div className="container" style={{ maxWidth: '1000px' }}>
+            <main className="page-container">
+                <div className="container">
+                    {/* 页面头部 */}
                     <div className="page-header">
-                        <div>
-                            <h1 className="page-title">用户管理</h1>
-                            <p className="page-subtitle">管理团队成员与权限 (共 {users.length} 人)</p>
+                        <div className="page-header-content">
+                            <div className="page-header-icon">👤</div>
+                            <div>
+                                <h1 className="page-title">用户管理</h1>
+                                <p className="page-subtitle">
+                                    管理团队成员与权限 · 共 <span className="text-glow">{users.length}</span> 人
+                                </p>
+                            </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div className="page-header-actions">
                             <button
                                 className="btn btn-secondary"
                                 onClick={() => setShowBatchModal(true)}
@@ -286,6 +303,7 @@ export default function UsersPage() {
                         </div>
                     </div>
 
+                    {/* 用户列表卡片 */}
                     <div className="card">
                         <div className="table-container">
                             <table className="table">
@@ -300,44 +318,52 @@ export default function UsersPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {users.map((user) => (
-                                        <tr key={user.id}>
-                                            <td style={{ fontWeight: 500, color: 'var(--primary-light)' }}>{user.username || '-'}</td>
-                                            <td style={{ fontWeight: 500 }}>{user.name}</td>
-                                            <td style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>{user.phone || '-'}</td>
+                                    {users.map((user, index) => (
+                                        <tr key={user.id} style={{ animationDelay: `${index * 0.05}s` }}>
                                             <td>
-                                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                                                    {(user.role || '').split(',').map(role => (
+                                                <span className="text-mono text-glow">{user.username || '-'}</span>
+                                            </td>
+                                            <td>
+                                                <div className="user-cell">
+                                                    <div className="user-avatar">
+                                                        {(user.name || '?')[0]}
+                                                    </div>
+                                                    <span className="user-name">{user.name}</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className="text-muted">{user.phone || '-'}</span>
+                                            </td>
+                                            <td>
+                                                <div className="badge-group">
+                                                    {(user.role || '').split(',').filter(r => r).map(role => (
                                                         <span
                                                             key={role}
-                                                            className={`badge ${role === 'PM' ? 'badge-primary' :
-                                                                role === 'RD' ? 'badge-info' :
-                                                                    role === 'OP' ? 'badge-warning' : 'badge-success'
-                                                                }`}
+                                                            className={`badge ${getRoleBadgeClass(role)}`}
                                                         >
                                                             {getRoleLabel(role)}
                                                         </span>
                                                     ))}
                                                 </div>
                                             </td>
-                                            <td style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                                                {new Date(user.createdAt).toLocaleDateString('zh-CN')}
+                                            <td>
+                                                <span className="text-muted text-sm">
+                                                    {new Date(user.createdAt).toLocaleDateString('zh-CN')}
+                                                </span>
                                             </td>
                                             <td className="text-right">
-                                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                                <div className="action-buttons">
                                                     <button
-                                                        className="btn btn-secondary"
-                                                        style={{ padding: '6px 12px', fontSize: '12px' }}
+                                                        className="btn btn-sm btn-ghost"
                                                         onClick={() => startEdit(user)}
                                                     >
-                                                        编辑
+                                                        ✏️ 编辑
                                                     </button>
                                                     <button
-                                                        className="btn btn-danger"
-                                                        style={{ padding: '6px 12px', fontSize: '12px' }}
+                                                        className="btn btn-sm btn-ghost btn-danger-ghost"
                                                         onClick={() => handleDelete(user.id)}
                                                     >
-                                                        删除
+                                                        🗑️ 删除
                                                     </button>
                                                 </div>
                                             </td>
@@ -346,109 +372,113 @@ export default function UsersPage() {
                                 </tbody>
                             </table>
                         </div>
+
+                        {users.length === 0 && (
+                            <div className="empty-state">
+                                <div className="empty-icon">👤</div>
+                                <h3>暂无用户</h3>
+                                <p>点击"添加用户"创建第一个团队成员</p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* 编辑弹窗 */}
+                {/* 编辑用户弹窗 */}
                 {editingUser && (
-                    <div style={{
-                        position: 'fixed',
-                        top: 0, left: 0, right: 0, bottom: 0,
-                        background: 'rgba(0,0,0,0.7)',
-                        backdropFilter: 'blur(4px)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 1000
-                    }}>
-                        <div className="card" style={{ width: '450px', maxWidth: '90%' }}>
-                            <div className="card-header">
-                                <h3 className="card-title">编辑用户</h3>
+                    <div className="modal-overlay" onClick={() => setEditingUser(null)}>
+                        <div className="modal modal-md" onClick={e => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <h3 className="modal-title">
+                                    <span className="modal-icon">✏️</span>
+                                    编辑用户
+                                </h3>
                                 <button
+                                    className="modal-close"
                                     onClick={() => setEditingUser(null)}
-                                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '20px' }}
                                 >
                                     ×
                                 </button>
                             </div>
 
-                            <form onSubmit={handleUpdate}>
-                                <div className="form-group">
-                                    <label className="form-label">用户名 <span style={{ color: 'var(--danger)' }}>*</span></label>
-                                    <input
-                                        type="text"
-                                        className="form-input"
-                                        placeholder="用于登录的用户名"
-                                        value={editForm.username}
-                                        onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
-                                        required
-                                    />
+                            <form onSubmit={handleUpdate} className="modal-body">
+                                <div className="form-grid">
+                                    <div className="form-group">
+                                        <label className="form-label">
+                                            用户名 <span className="required">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            placeholder="用于登录的用户名"
+                                            value={editForm.username}
+                                            onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">
+                                            姓名 <span className="required">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            placeholder="真实姓名"
+                                            value={editForm.name}
+                                            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                            required
+                                        />
+                                    </div>
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">姓名</label>
-                                    <input
-                                        type="text"
-                                        className="form-input"
-                                        value={editForm.name}
-                                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                                        required
-                                    />
+
+                                <div className="form-grid">
+                                    <div className="form-group">
+                                        <label className="form-label">邮箱</label>
+                                        <input
+                                            type="email"
+                                            className="form-input"
+                                            placeholder="email@example.com"
+                                            value={editForm.email}
+                                            onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">
+                                            手机号 <span className="required">*</span>
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            className="form-input"
+                                            placeholder="请输入手机号"
+                                            value={editForm.phone}
+                                            onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                                            required
+                                        />
+                                    </div>
                                 </div>
+
                                 <div className="form-group">
-                                    <label className="form-label">邮箱</label>
-                                    <input
-                                        type="email"
-                                        className="form-input"
-                                        value={editForm.email}
-                                        onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">手机号 <span style={{ color: 'var(--danger)' }}>*</span></label>
-                                    <input
-                                        type="tel"
-                                        className="form-input"
-                                        placeholder="请输入手机号"
-                                        value={editForm.phone}
-                                        onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>角色</label>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                    <label className="form-label">角色 <span className="required">*</span></label>
+                                    <div className="role-selector">
                                         {roles.map(r => {
                                             const isSelected = editSelectedRoles.includes(r.code);
                                             return (
                                                 <div
                                                     key={r.code}
+                                                    className={`role-option ${isSelected ? 'selected' : ''}`}
                                                     onClick={() => handleRoleChange(r.code)}
-                                                    style={{
-                                                        padding: '8px 12px',
-                                                        border: `1px solid ${isSelected ? 'var(--primary)' : 'var(--border-color)'}`,
-                                                        borderRadius: 'var(--radius-sm)',
-                                                        background: isSelected ? 'rgba(52, 120, 246, 0.1)' : 'var(--bg-tertiary)',
-                                                        cursor: 'pointer',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        fontSize: '13px'
-                                                    }}
                                                 >
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isSelected}
-                                                        onChange={() => { }}
-                                                        style={{ marginRight: '8px' }}
-                                                    />
-                                                    {r.name}
+                                                    <div className="role-checkbox">
+                                                        {isSelected && <span>✓</span>}
+                                                    </div>
+                                                    <span className="role-name">{r.name}</span>
                                                 </div>
                                             );
                                         })}
                                     </div>
                                 </div>
+
                                 <div className="form-group">
-                                    <label className="form-label">新密码 (可选)</label>
+                                    <label className="form-label">新密码</label>
                                     <input
                                         type="password"
                                         className="form-input"
@@ -456,17 +486,15 @@ export default function UsersPage() {
                                         value={editForm.password}
                                         onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
                                     />
+                                    <span className="form-hint">留空则保持原密码不变</span>
                                 </div>
 
-                                <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
-                                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>保存</button>
-                                    <button
-                                        type="button"
-                                        className="btn btn-secondary"
-                                        onClick={() => setEditingUser(null)}
-                                        style={{ flex: 1 }}
-                                    >
+                                <div className="modal-footer">
+                                    <button type="button" className="btn btn-secondary" onClick={() => setEditingUser(null)}>
                                         取消
+                                    </button>
+                                    <button type="submit" className="btn btn-primary">
+                                        保存修改
                                     </button>
                                 </div>
                             </form>
@@ -474,76 +502,62 @@ export default function UsersPage() {
                     </div>
                 )}
 
-                <ConfirmModal
-                    isOpen={confirmConfig.isOpen}
-                    onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
-                    {...confirmConfig}
-                />
-
                 {/* 批量导入弹窗 */}
                 {showBatchModal && (
-                    <div style={{
-                        position: 'fixed',
-                        top: 0, left: 0, right: 0, bottom: 0,
-                        background: 'rgba(0,0,0,0.7)',
-                        backdropFilter: 'blur(4px)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 1000
+                    <div className="modal-overlay" onClick={() => {
+                        setShowBatchModal(false);
+                        setBatchText('');
+                        setBatchResult(null);
                     }}>
-                        <div className="card" style={{ width: '600px', maxWidth: '90%', maxHeight: '90vh', overflow: 'auto' }}>
-                            <div className="card-header">
-                                <h3 className="card-title">批量导入用户</h3>
+                        <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <h3 className="modal-title">
+                                    <span className="modal-icon">📋</span>
+                                    批量导入用户
+                                </h3>
                                 <button
+                                    className="modal-close"
                                     onClick={() => {
                                         setShowBatchModal(false);
                                         setBatchText('');
                                         setBatchResult(null);
                                     }}
-                                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '20px' }}
                                 >
                                     ×
                                 </button>
                             </div>
 
-                            <div style={{ padding: '0 16px 16px' }}>
+                            <div className="modal-body">
                                 {/* 格式说明 */}
-                                <div style={{
-                                    background: 'var(--bg-tertiary)',
-                                    padding: '12px',
-                                    borderRadius: 'var(--radius-sm)',
-                                    marginBottom: '16px',
-                                    fontSize: '13px'
-                                }}>
-                                    <div style={{ fontWeight: 500, marginBottom: '8px', color: 'var(--text-primary)' }}>📋 数据格式说明</div>
-                                    <div style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                                        每行一个用户，字段用逗号或制表符分隔：<br />
-                                        <code style={{ background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: '4px' }}>
+                                <div className="info-panel">
+                                    <div className="info-panel-header">
+                                        <span className="info-icon">📋</span>
+                                        <span className="info-title">数据格式说明</span>
+                                    </div>
+                                    <div className="info-panel-content">
+                                        <p>每行一个用户，字段用逗号或制表符分隔：</p>
+                                        <code className="code-block">
                                             用户名, 姓名, 邮箱, 手机号, 角色, 密码(可选)
-                                        </code><br />
-                                        角色可选：PM, RD, QA, PO, DBA, OP（多角色用/分隔如 RD/QA）<br />
-                                        密码不填则默认为 123456
+                                        </code>
+                                        <p className="text-muted">
+                                            角色可选：PM, RD, QA, PO, DBA, OP（多角色用/分隔如 RD/QA）<br />
+                                            密码不填则默认为 123456
+                                        </p>
                                     </div>
                                 </div>
 
                                 {/* 示例 */}
-                                <div style={{
-                                    background: 'var(--bg-secondary)',
-                                    padding: '12px',
-                                    borderRadius: 'var(--radius-sm)',
-                                    marginBottom: '16px',
-                                    fontSize: '12px',
-                                    fontFamily: 'monospace',
-                                    color: 'var(--text-muted)'
-                                }}>
-                                    zhangsan, 张三, zhangsan@example.com, 13800138001, RD<br />
-                                    lisi, 李四, lisi@example.com, 13800138002, QA, mypassword<br />
-                                    wangwu, 王五, wangwu@example.com, 13800138003, RD
+                                <div className="code-example">
+                                    <div className="code-example-header">示例数据</div>
+                                    <pre className="code-example-content">
+{`zhangsan, 张三, zhangsan@example.com, 13800138001, RD
+lisi, 李四, lisi@example.com, 13800138002, QA, mypassword
+wangwu, 王五, wangwu@example.com, 13800138003, RD`}
+                                    </pre>
                                 </div>
 
                                 {/* 文件上传 */}
-                                <div style={{ marginBottom: '16px' }}>
+                                <div className="upload-section">
                                     <input
                                         type="file"
                                         ref={fileInputRef}
@@ -555,7 +569,6 @@ export default function UsersPage() {
                                         type="button"
                                         className="btn btn-secondary"
                                         onClick={() => fileInputRef.current?.click()}
-                                        style={{ fontSize: '13px' }}
                                     >
                                         📁 上传文件 (.txt/.csv)
                                     </button>
@@ -565,58 +578,57 @@ export default function UsersPage() {
                                 <div className="form-group">
                                     <label className="form-label">用户数据</label>
                                     <textarea
-                                        className="form-input"
+                                        className="form-input form-textarea"
                                         rows={8}
                                         placeholder="粘贴或输入用户数据..."
                                         value={batchText}
                                         onChange={(e) => setBatchText(e.target.value)}
-                                        style={{ fontFamily: 'monospace', fontSize: '13px' }}
                                     />
                                 </div>
 
                                 {/* 预览解析结果 */}
                                 {batchText && (
-                                    <div style={{
-                                        background: 'var(--bg-tertiary)',
-                                        padding: '12px',
-                                        borderRadius: 'var(--radius-sm)',
-                                        marginBottom: '16px',
-                                        fontSize: '13px'
-                                    }}>
-                                        <div style={{ fontWeight: 500, marginBottom: '8px' }}>
-                                            📊 解析预览：共 {parseBatchText(batchText).length} 条有效数据
+                                    <div className="preview-panel">
+                                        <div className="preview-header">
+                                            <span className="preview-icon">📊</span>
+                                            <span>解析预览：共 {parseBatchText(batchText).length} 条有效数据</span>
                                         </div>
-                                        {parseBatchText(batchText).slice(0, 5).map((u, i) => (
-                                            <div key={i} style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
-                                                {i + 1}. {u.username} | {u.name} | {u.phone} | {u.role}
-                                            </div>
-                                        ))}
-                                        {parseBatchText(batchText).length > 5 && (
-                                            <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px' }}>
-                                                ... 还有 {parseBatchText(batchText).length - 5} 条
-                                            </div>
-                                        )}
+                                        <div className="preview-content">
+                                            {parseBatchText(batchText).slice(0, 5).map((u, i) => (
+                                                <div key={i} className="preview-item">
+                                                    <span className="preview-index">{i + 1}.</span>
+                                                    <span>{u.username}</span>
+                                                    <span className="text-muted">|</span>
+                                                    <span>{u.name}</span>
+                                                    <span className="text-muted">|</span>
+                                                    <span>{u.phone}</span>
+                                                    <span className="text-muted">|</span>
+                                                    <span className="badge badge-info">{u.role}</span>
+                                                </div>
+                                            ))}
+                                            {parseBatchText(batchText).length > 5 && (
+                                                <div className="preview-more">
+                                                    ... 还有 {parseBatchText(batchText).length - 5} 条
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
 
                                 {/* 执行结果 */}
                                 {batchResult && (
-                                    <div style={{
-                                        background: batchResult.errorCount > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
-                                        border: `1px solid ${batchResult.errorCount > 0 ? 'var(--danger)' : 'var(--success)'}`,
-                                        padding: '12px',
-                                        borderRadius: 'var(--radius-sm)',
-                                        marginBottom: '16px',
-                                        fontSize: '13px'
-                                    }}>
-                                        <div style={{ fontWeight: 500, marginBottom: '8px' }}>
-                                            {batchResult.errorCount > 0 ? '⚠️' : '✅'} {batchResult.message}
+                                    <div className={`result-panel ${batchResult.errorCount > 0 ? 'result-error' : 'result-success'}`}>
+                                        <div className="result-header">
+                                            <span className="result-icon">
+                                                {batchResult.errorCount > 0 ? '⚠️' : '✅'}
+                                            </span>
+                                            <span>{batchResult.message}</span>
                                         </div>
                                         {batchResult.errors?.length > 0 && (
-                                            <div style={{ marginTop: '8px' }}>
-                                                <div style={{ color: 'var(--danger)', fontWeight: 500, marginBottom: '4px' }}>失败详情：</div>
+                                            <div className="result-errors">
+                                                <div className="error-title">失败详情：</div>
                                                 {batchResult.errors.map((err, i) => (
-                                                    <div key={i} style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
+                                                    <div key={i} className="error-item">
                                                         第 {err.row} 行 {err.name ? `(${err.name})` : ''}: {err.error}
                                                     </div>
                                                 ))}
@@ -624,35 +636,47 @@ export default function UsersPage() {
                                         )}
                                     </div>
                                 )}
+                            </div>
 
-                                {/* 操作按钮 */}
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                    <button
-                                        type="button"
-                                        className="btn btn-primary"
-                                        onClick={executeBatchCreate}
-                                        disabled={batchLoading || !batchText.trim()}
-                                        style={{ flex: 1 }}
-                                    >
-                                        {batchLoading ? '导入中...' : '确认导入'}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="btn btn-secondary"
-                                        onClick={() => {
-                                            setShowBatchModal(false);
-                                            setBatchText('');
-                                            setBatchResult(null);
-                                        }}
-                                        style={{ flex: 1 }}
-                                    >
-                                        关闭
-                                    </button>
-                                </div>
+                            <div className="modal-footer">
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={() => {
+                                        setShowBatchModal(false);
+                                        setBatchText('');
+                                        setBatchResult(null);
+                                    }}
+                                >
+                                    关闭
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn-primary"
+                                    onClick={executeBatchCreate}
+                                    disabled={batchLoading || !batchText.trim()}
+                                >
+                                    {batchLoading ? (
+                                        <>
+                                            <span className="loading-spinner-sm"></span>
+                                            导入中...
+                                        </>
+                                    ) : (
+                                        <>
+                                            🚀 开始导入
+                                        </>
+                                    )}
+                                </button>
                             </div>
                         </div>
                     </div>
                 )}
+
+                <ConfirmModal
+                    isOpen={confirmConfig.isOpen}
+                    onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+                    {...confirmConfig}
+                />
             </main>
         </>
     );

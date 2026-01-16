@@ -85,7 +85,6 @@ export default function ProfilePage() {
             const data = await res.json();
             if (res.ok) {
                 toast.success('信息更新成功');
-                // 更新本地存储的用户信息
                 const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
                 localStorage.setItem('user', JSON.stringify({
                     ...storedUser,
@@ -168,11 +167,37 @@ export default function ProfilePage() {
         return (role || '').split(',').map(r => roleMap[r] || r).join('、');
     };
 
+    // 获取角色徽章
+    const getRoleBadges = (role) => {
+        const roleStyles = {
+            'ADMIN': 'badge-danger',
+            'PM': 'badge-primary',
+            'RD': 'badge-info',
+            'QA': 'badge-success',
+            'PO': 'badge-warning',
+            'DBA': 'badge-secondary',
+            'OP': 'badge-tertiary',
+        };
+        const roleLabels = {
+            'ADMIN': '管理员',
+            'PM': 'PM',
+            'RD': 'RD',
+            'QA': 'QA',
+            'PO': 'PO',
+            'DBA': 'DBA',
+            'OP': 'OP',
+        };
+        return (role || '').split(',').filter(r => r).map(r => ({
+            class: roleStyles[r] || 'badge-secondary',
+            label: roleLabels[r] || r
+        }));
+    };
+
     if (loading) {
         return (
             <>
                 <Navbar />
-                <div className="loading" style={{ minHeight: 'calc(100vh - 64px)' }}>
+                <div className="loading">
                     <div className="loading-spinner"></div>
                 </div>
             </>
@@ -182,89 +207,147 @@ export default function ProfilePage() {
     return (
         <>
             <Navbar />
-            <main style={{ padding: '32px 24px' }}>
-                <div className="container" style={{ maxWidth: '600px' }}>
+            <main className="page-container">
+                <div className="container" style={{ maxWidth: '700px' }}>
+                    {/* 页面头部 */}
                     <div className="page-header">
-                        <div>
-                            <h1 className="page-title">个人信息</h1>
-                            <p className="page-subtitle">管理您的账户信息</p>
-                        </div>
-                    </div>
-
-                    {/* 只读信息 */}
-                    <div className="card" style={{ marginBottom: '24px' }}>
-                        <div className="card-header">
-                            <h3 className="card-title">账户信息</h3>
-                        </div>
-                        <div style={{ display: 'grid', gap: '16px' }}>
-                            <div className="info-row">
-                                <span className="info-label">用户名</span>
-                                <span className="info-value">{user?.username || '-'}</span>
-                            </div>
-                            <div className="info-row">
-                                <span className="info-label">姓名</span>
-                                <span className="info-value">{user?.name || '-'}</span>
-                            </div>
-                            <div className="info-row">
-                                <span className="info-label">角色</span>
-                                <span className="info-value">{getRoleLabel(user?.role)}</span>
-                            </div>
-                            <div className="info-row">
-                                <span className="info-label">注册时间</span>
-                                <span className="info-value">
-                                    {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('zh-CN') : '-'}
-                                </span>
+                        <div className="page-header-content">
+                            <div className="page-header-icon">👤</div>
+                            <div>
+                                <h1 className="page-title">个人信息</h1>
+                                <p className="page-subtitle">管理您的账户信息和安全设置</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* 可编辑信息 */}
-                    <div className="card" style={{ marginBottom: '24px' }}>
+                    {/* 用户头像卡片 */}
+                    <div className="profile-hero-card">
+                        <div className="profile-avatar-large">
+                            {(user?.name || '?')[0]}
+                        </div>
+                        <div className="profile-hero-info">
+                            <h2 className="profile-name">{user?.name}</h2>
+                            <p className="profile-username">@{user?.username}</p>
+                            <div className="profile-roles">
+                                {getRoleBadges(user?.role).map((badge, i) => (
+                                    <span key={i} className={`badge ${badge.class}`}>{badge.label}</span>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 账户信息 */}
+                    <div className="card-static">
                         <div className="card-header">
-                            <h3 className="card-title">联系方式</h3>
+                            <h3 className="card-title">
+                                <span className="title-icon">📋</span>
+                                账户信息
+                            </h3>
+                        </div>
+                        <div className="profile-info-grid">
+                            <div className="profile-info-item">
+                                <span className="info-icon">👤</span>
+                                <div className="info-content">
+                                    <label>用户名</label>
+                                    <span>{user?.username || '-'}</span>
+                                </div>
+                            </div>
+                            <div className="profile-info-item">
+                                <span className="info-icon">📛</span>
+                                <div className="info-content">
+                                    <label>姓名</label>
+                                    <span>{user?.name || '-'}</span>
+                                </div>
+                            </div>
+                            <div className="profile-info-item">
+                                <span className="info-icon">🎭</span>
+                                <div className="info-content">
+                                    <label>角色</label>
+                                    <span>{getRoleLabel(user?.role)}</span>
+                                </div>
+                            </div>
+                            <div className="profile-info-item">
+                                <span className="info-icon">📅</span>
+                                <div className="info-content">
+                                    <label>注册时间</label>
+                                    <span>
+                                        {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('zh-CN') : '-'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 联系方式 */}
+                    <div className="card-static">
+                        <div className="card-header">
+                            <h3 className="card-title">
+                                <span className="title-icon">📞</span>
+                                联系方式
+                            </h3>
                         </div>
                         <form onSubmit={handleSaveBasicInfo}>
-                            <div className="form-group">
-                                <label className="form-label">邮箱地址</label>
-                                <input
-                                    type="email"
-                                    className="form-input"
-                                    placeholder="请输入邮箱地址"
-                                    value={form.email}
-                                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">手机号</label>
-                                <input
-                                    type="tel"
-                                    className="form-input"
-                                    placeholder="请输入手机号"
-                                    value={form.phone}
-                                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                                />
+                            <div className="form-grid">
+                                <div className="form-group">
+                                    <label className="form-label">
+                                        <span className="label-icon">📧</span>
+                                        邮箱地址
+                                    </label>
+                                    <input
+                                        type="email"
+                                        className="form-input"
+                                        placeholder="请输入邮箱地址"
+                                        value={form.email}
+                                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">
+                                        <span className="label-icon">📱</span>
+                                        手机号
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        className="form-input"
+                                        placeholder="请输入手机号"
+                                        value={form.phone}
+                                        onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                                    />
+                                </div>
                             </div>
                             <button 
                                 type="submit" 
-                                className="btn btn-primary"
+                                className="btn btn-primary btn-glow"
                                 disabled={saving}
-                                style={{ width: '100%' }}
+                                style={{ width: '100%', marginTop: '8px' }}
                             >
-                                {saving ? '保存中...' : '保存修改'}
+                                {saving ? (
+                                    <>
+                                        <span className="loading-spinner-sm"></span>
+                                        保存中...
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="btn-icon">💾</span>
+                                        保存修改
+                                    </>
+                                )}
                             </button>
                         </form>
                     </div>
 
                     {/* 密码修改 */}
-                    <div className="card">
+                    <div className="card-static">
                         <div className="card-header">
-                            <h3 className="card-title">修改密码</h3>
+                            <h3 className="card-title">
+                                <span className="title-icon">🔐</span>
+                                安全设置
+                            </h3>
                             {!showPasswordSection && (
                                 <button
                                     className="btn btn-secondary"
                                     onClick={() => setShowPasswordSection(true)}
-                                    style={{ padding: '6px 12px', fontSize: '13px' }}
                                 >
                                     修改密码
                                 </button>
@@ -274,7 +357,9 @@ export default function ProfilePage() {
                         {showPasswordSection ? (
                             <form onSubmit={handleChangePassword}>
                                 <div className="form-group">
-                                    <label className="form-label">当前密码 *</label>
+                                    <label className="form-label">
+                                        当前密码 <span className="required">*</span>
+                                    </label>
                                     <input
                                         type="password"
                                         className="form-input"
@@ -287,44 +372,42 @@ export default function ProfilePage() {
                                         required
                                     />
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">新密码 *</label>
-                                    <input
-                                        type="password"
-                                        className="form-input"
-                                        placeholder="请输入新密码（至少6位）"
-                                        value={passwordForm.newPassword}
-                                        onChange={(e) => setPasswordForm({ 
-                                            ...passwordForm, 
-                                            newPassword: e.target.value 
-                                        })}
-                                        required
-                                        minLength={6}
-                                    />
+                                <div className="form-grid">
+                                    <div className="form-group">
+                                        <label className="form-label">
+                                            新密码 <span className="required">*</span>
+                                        </label>
+                                        <input
+                                            type="password"
+                                            className="form-input"
+                                            placeholder="请输入新密码（至少6位）"
+                                            value={passwordForm.newPassword}
+                                            onChange={(e) => setPasswordForm({ 
+                                                ...passwordForm, 
+                                                newPassword: e.target.value 
+                                            })}
+                                            required
+                                            minLength={6}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">
+                                            确认新密码 <span className="required">*</span>
+                                        </label>
+                                        <input
+                                            type="password"
+                                            className="form-input"
+                                            placeholder="请再次输入新密码"
+                                            value={passwordForm.confirmPassword}
+                                            onChange={(e) => setPasswordForm({ 
+                                                ...passwordForm, 
+                                                confirmPassword: e.target.value 
+                                            })}
+                                            required
+                                        />
+                                    </div>
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">确认新密码 *</label>
-                                    <input
-                                        type="password"
-                                        className="form-input"
-                                        placeholder="请再次输入新密码"
-                                        value={passwordForm.confirmPassword}
-                                        onChange={(e) => setPasswordForm({ 
-                                            ...passwordForm, 
-                                            confirmPassword: e.target.value 
-                                        })}
-                                        required
-                                    />
-                                </div>
-                                <div style={{ display: 'flex', gap: '12px' }}>
-                                    <button 
-                                        type="submit" 
-                                        className="btn btn-primary"
-                                        disabled={saving}
-                                        style={{ flex: 1 }}
-                                    >
-                                        {saving ? '保存中...' : '确认修改'}
-                                    </button>
+                                <div className="button-group">
                                     <button 
                                         type="button" 
                                         className="btn btn-secondary"
@@ -336,40 +419,26 @@ export default function ProfilePage() {
                                                 confirmPassword: '',
                                             });
                                         }}
-                                        style={{ flex: 1 }}
                                     >
                                         取消
+                                    </button>
+                                    <button 
+                                        type="submit" 
+                                        className="btn btn-primary"
+                                        disabled={saving}
+                                    >
+                                        {saving ? '保存中...' : '确认修改'}
                                     </button>
                                 </div>
                             </form>
                         ) : (
-                            <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
-                                点击右上角按钮修改密码
-                            </p>
+                            <div className="security-hint">
+                                <span className="hint-icon">💡</span>
+                                <p>定期修改密码可以提高账户安全性</p>
+                            </div>
                         )}
                     </div>
                 </div>
-
-                <style jsx>{`
-                    .info-row {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        padding: 8px 0;
-                        border-bottom: 1px solid var(--border-color);
-                    }
-                    .info-row:last-child {
-                        border-bottom: none;
-                    }
-                    .info-label {
-                        color: var(--text-muted);
-                        font-size: 14px;
-                    }
-                    .info-value {
-                        color: var(--text-primary);
-                        font-weight: 500;
-                    }
-                `}</style>
             </main>
         </>
     );

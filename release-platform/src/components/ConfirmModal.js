@@ -1,94 +1,132 @@
 'use client';
 
+import { useEffect } from 'react';
+
 export default function ConfirmModal({
     isOpen,
     onClose,
     onConfirm,
-    title,
-    message,
-    type = 'warning',
-    confirmText = '确定',
-    cancelText = '取消'
+    title = '确认操作',
+    message = '确定要执行此操作吗？',
+    confirmText = '确认',
+    cancelText = '取消',
+    type = 'default', // default, danger, warning, success
+    loading = false,
 }) {
+    // ESC 键关闭
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === 'Escape' && isOpen) {
+                onClose();
+            }
+        };
+        document.addEventListener('keydown', handleEsc);
+        return () => document.removeEventListener('keydown', handleEsc);
+    }, [isOpen, onClose]);
+
+    // 阻止背景滚动
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
-    const isDanger = type === 'danger';
+    const typeConfig = {
+        default: { icon: InfoIcon, color: 'var(--primary)', btnClass: 'btn-primary' },
+        danger: { icon: AlertIcon, color: 'var(--error)', btnClass: 'btn-danger' },
+        warning: { icon: WarningIcon, color: 'var(--warning)', btnClass: 'btn-warning' },
+        success: { icon: CheckIcon, color: 'var(--success)', btnClass: 'btn-success' },
+    };
+
+    const config = typeConfig[type] || typeConfig.default;
+    const Icon = config.icon;
 
     return (
-        <div style={{
-            position: 'fixed',
-            top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.7)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            animation: 'fadeIn 0.2s ease-out'
-        }}>
-            <div className="card" style={{
-                width: '400px',
-                maxWidth: '90%',
-                animation: 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                border: isDanger ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid var(--border-light)'
-            }}>
-                <div className="card-header" style={{ borderBottom: 'none', paddingBottom: 0 }}>
-                    <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '18px' }}>
-                        <span style={{
-                            width: '32px', height: '32px',
-                            borderRadius: '50%',
-                            background: isDanger ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                            color: isDanger ? 'var(--error)' : 'var(--warning)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '18px'
-                        }}>
-                            {isDanger ? '⚠️' : '🔔'}
-                        </span>
-                        {title}
-                    </h3>
-                    <button
-                        onClick={onClose}
-                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '24px', lineHeight: 1 }}
-                    >
-                        ×
-                    </button>
-                </div>
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-content">
+                    {/* 图标 */}
+                    <div className="modal-icon" style={{ '--icon-color': config.color }}>
+                        <Icon />
+                        <div className="icon-glow" />
+                    </div>
 
-                <div style={{ padding: '8px 0 24px 44px' }}>
-                    <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.6, fontSize: '14px' }}>
-                        {message}
-                    </p>
-                </div>
+                    {/* 标题和消息 */}
+                    <h3 className="modal-title">{title}</h3>
+                    <p className="modal-message">{message}</p>
 
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
-                    <button
-                        className="btn btn-secondary"
-                        onClick={onClose}
-                    >
-                        {cancelText}
-                    </button>
-                    <button
-                        className={`btn ${isDanger ? 'btn-danger' : 'btn-primary'}`}
-                        onClick={() => {
-                            onClose();
-                            onConfirm();
-                        }}
-                    >
-                        {confirmText}
-                    </button>
+                    {/* 按钮 */}
+                    <div className="modal-actions">
+                        <button 
+                            className="btn btn-secondary" 
+                            onClick={onClose}
+                            disabled={loading}
+                        >
+                            {cancelText}
+                        </button>
+                        <button 
+                            className={`btn ${config.btnClass}`}
+                            onClick={onConfirm}
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <>
+                                    <span className="spinner" />
+                                    <span>处理中...</span>
+                                </>
+                            ) : (
+                                confirmText
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
-
-            <style jsx global>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                @keyframes scaleIn {
-                    from { transform: scale(0.95); opacity: 0; }
-                    to { transform: scale(1); opacity: 1; }
-                }
-            `}</style>
         </div>
+    );
+}
+
+function InfoIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+    );
+}
+
+function AlertIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="15" y1="9" x2="9" y2="15" />
+            <line x1="9" y1="9" x2="15" y2="15" />
+        </svg>
+    );
+}
+
+function WarningIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+    );
+}
+
+function CheckIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
     );
 }

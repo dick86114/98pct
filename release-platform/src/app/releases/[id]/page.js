@@ -8,6 +8,9 @@ import ChecklistPanel from '@/components/ChecklistPanel';
 import FileUpload from '@/components/FileUpload';
 import ConfirmModal from '@/components/ConfirmModal';
 import ReleaseSummary from '@/components/ReleaseSummary';
+import CustomSelect from '@/components/CustomSelect';
+import DatePicker from '@/components/DatePicker';
+import DateTimePicker from '@/components/DateTimePicker';
 import { toast } from 'react-hot-toast';
 import { STAGES, STAGE_LABELS, getAllChecklists, PREPARATION_CHECKLIST } from '@/lib/constants';
 import useDictionary from '@/hooks/useDictionary';
@@ -20,6 +23,29 @@ const STATUS_STYLES = {
     FAILED: { label: '发版失败', class: 'badge-danger' },
 };
 
+// 根据文件名获取对应的图标
+const getFileIcon = (filename) => {
+    if (!filename) return '📄';
+    const ext = filename.split('.').pop()?.toLowerCase();
+    const iconMap = {
+        // 图片
+        'png': '🖼️', 'jpg': '🖼️', 'jpeg': '🖼️', 'gif': '🖼️', 'svg': '🖼️', 'webp': '🖼️', 'ico': '🖼️', 'bmp': '🖼️',
+        // 文档
+        'pdf': '📕', 'doc': '📘', 'docx': '📘', 'txt': '📝', 'md': '📝',
+        // 表格
+        'xls': '📊', 'xlsx': '📊', 'csv': '📊',
+        // 演示
+        'ppt': '📙', 'pptx': '📙',
+        // 压缩包
+        'zip': '📦', 'rar': '📦', '7z': '📦', 'tar': '📦', 'gz': '📦',
+        // 代码
+        'js': '💻', 'ts': '💻', 'jsx': '💻', 'tsx': '💻', 'py': '💻', 'java': '💻', 'sql': '🗄️', 'json': '📋', 'xml': '📋', 'html': '🌐', 'css': '🎨',
+        // 其他
+        'log': '📜', 'sh': '⚙️', 'bat': '⚙️',
+    };
+    return iconMap[ext] || '📄';
+};
+
 // 系统选项（已改为使用字典）
 
 export default function ReleaseDetailPage({ params }) {
@@ -30,6 +56,7 @@ export default function ReleaseDetailPage({ params }) {
     const [checklists, setChecklists] = useState([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
+    const [expandedDocMembers, setExpandedDocMembers] = useState({}); // 跟踪哪些成员的附件列表展开
     
     // 从字典获取数据库变更类型和所属系统
     const { items: dbChangeTypes } = useDictionary('dbChangeType');
@@ -66,14 +93,16 @@ export default function ReleaseDetailPage({ params }) {
     const [poForm, setPoForm] = useState({
         poName: '',
         poPhone: '',
-        poAcceptDate: ''
+        poAcceptDate: '',
+        poAcceptComment: ''
     });
 
     // DBA 审核信息状态
     const [dbaForm, setDbaForm] = useState({
         dbaName: '',
         dbaPhone: '',
-        dbaReviewDate: ''
+        dbaReviewDate: '',
+        dbaReviewComment: ''
     });
 
     // DBA 实施结果状态
@@ -111,6 +140,9 @@ export default function ReleaseDetailPage({ params }) {
         onConfirm: () => { },
     });
 
+    // 删除操作加载状态
+    const [deleteLoading, setDeleteLoading] = useState(false);
+
     // 当前激活的标签页（初始值会在获取用户信息后根据角色设置）
     const [activeTab, setActiveTab] = useState('info');
     const [defaultTabSet, setDefaultTabSet] = useState(false);
@@ -128,6 +160,353 @@ export default function ReleaseDetailPage({ params }) {
         await fetchReleaseDetail(token);
         setRefreshing(false);
         toast.success('数据已刷新');
+    };
+
+    // 渲染实施/验证阶段的所有填报内容（供各角色视图复用）
+    const renderImplementationStageContent = () => {
+        if (release.stage !== 'IMPLEMENTATION' && release.stage !== 'VERIFICATION' && release.stage !== 'COMPLETED') {
+            return null;
+        }
+        
+        const typeLabels = {
+            TEST_REPORT: '测试报告',
+            TEST_CASE: '测试用例',
+            ACCEPTANCE_REPORT: '验收报告',
+            BACKUP_SCREENSHOT: '备份截图',
+            PROD_TEST_REPORT: '正式环境测试报告',
+            OTHER: '其他文档'
+        };
+        
+        return (
+            <>
+                {/* 开发人员变更内容 */}
+                <div className="card" style={{ marginTop: '20px' }}>
+                    <div className="card-header">
+                        <div>
+                            <h3 className="card-title">💻 开发变更内容</h3>
+                            <span className="card-subtitle">准备阶段开发人员提交的变更详情</span>
+                        </div>
+                    </div>
+                    <div className="prep-content-list">
+                        {(release.members || []).filter(m => {
+                            const roles = (m.user?.role || '').split(',');
+                            return roles.includes('RD') && m.content?.contentDesc;
+                        }).length > 0 ? (
+                            (release.members || []).filter(m => {
+                                const roles = (m.user?.role || '').split(',');
+                                return roles.includes('RD');
+                            }).map(member => {
+                                const content = member.content || {};
+                                if (!content.contentDesc) return null;
+                                return (
+                                    <div key={member.id} className="prep-content-item">
+                                        <div className="prep-content-header">
+                                            <div className="prep-content-avatar">{(member.user?.name || '?')[0]}</div>
+                                            <div className="prep-content-info">
+                                                <span className="prep-content-name">{content.devName || member.user?.name}</span>
+                                                <span className="prep-content-meta">{content.devPhone || '-'} · {content.system || '门户'}</span>
+                                            </div>
+                                        </div>
+                                        <div className="prep-content-body">
+                                            <div className="prep-content-desc">
+                                                <label>发版涉及内容说明</label>
+                                                <p>{content.contentDesc}</p>
+                                            </div>
+                                            
+                                            {/* 数据库变更 */}
+                                            {content.dbChanges?.length > 0 && (
+                                                <div className="prep-db-changes">
+                                                    <h5>🗄️ 数据库变更 ({content.dbChanges.length} 条)</h5>
+                                                    {content.dbChanges.map((db, idx) => (
+                                                        <div key={idx} className="prep-db-item">
+                                                            <div className="prep-db-header">
+                                                                <span className="prep-db-index">#{idx + 1}</span>
+                                                                <span className="prep-db-type">{db.changeType}</span>
+                                                                {db.affectsOnline && <span className="prep-db-warning">⚠️ 影响线上</span>}
+                                                            </div>
+                                                            <div className="prep-db-grid">
+                                                                <div><b>数据库：</b>{db.dbName || '-'}</div>
+                                                                <div><b>表名：</b>{db.tableName || '-'}</div>
+                                                                <div><b>变更原因：</b>{db.reason || '-'}</div>
+                                                            </div>
+                                                            <div className="prep-db-sql">
+                                                                <label>SQL 语句</label>
+                                                                <pre>{db.sql || '-- 无'}</pre>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            
+                                            {/* 配置变更 */}
+                                            {content.configChanges?.length > 0 && (
+                                                <div className="prep-config-changes">
+                                                    <h5>⚙️ 配置变更 ({content.configChanges.length} 条)</h5>
+                                                    {content.configChanges.map((cfg, idx) => (
+                                                        <div key={idx} className="prep-config-item">
+                                                            <div><b>变更原因：</b>{cfg.reason || '-'}</div>
+                                                            <div><b>变更内容：</b>{cfg.content || '-'}</div>
+                                                            <div><b>可能影响：</b>{cfg.impact || '-'}</div>
+                                                            {cfg.affectsOnline && <span className="prep-config-warning">⚠️ 影响线上服务</span>}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="empty-hint">
+                                <span>📭</span>
+                                <p>暂无开发变更内容</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* 测试信息 */}
+                <div className="card" style={{ marginTop: '20px' }}>
+                    <div className="card-header">
+                        <div>
+                            <h3 className="card-title">🧪 测试信息</h3>
+                            <span className="card-subtitle">准备阶段测试人员提交的信息</span>
+                        </div>
+                    </div>
+                    <div className="prep-content-list">
+                        {(release.members || []).filter(m => {
+                            const roles = (m.user?.role || '').split(',');
+                            return roles.includes('QA') && m.content?.qaName;
+                        }).length > 0 ? (
+                            (release.members || []).filter(m => {
+                                const roles = (m.user?.role || '').split(',');
+                                return roles.includes('QA') && m.content?.qaName;
+                            }).map(member => {
+                                const content = member.content || {};
+                                return (
+                                    <div key={member.id} className="prep-content-item compact">
+                                        <div className="prep-content-header">
+                                            <div className="prep-content-avatar">{(member.user?.name || '?')[0]}</div>
+                                            <div className="prep-content-info">
+                                                <span className="prep-content-name">{content.qaName}</span>
+                                                <span className="prep-content-meta">{content.qaPhone || '-'}</span>
+                                            </div>
+                                            <div className="prep-content-date">
+                                                测试时间：{content.qaTestDate ? new Date(content.qaTestDate).toLocaleDateString('zh-CN') : '未填写'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="empty-hint">
+                                <span>📭</span>
+                                <p>暂无测试信息</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* DBA 审核信息 */}
+                <div className="card" style={{ marginTop: '20px' }}>
+                    <div className="card-header">
+                        <div>
+                            <h3 className="card-title">🗄️ DBA 审核信息</h3>
+                            <span className="card-subtitle">准备阶段 DBA 提交的审核信息</span>
+                        </div>
+                    </div>
+                    <div className="prep-content-list">
+                        {(release.members || []).filter(m => {
+                            const roles = (m.user?.role || '').split(',');
+                            return roles.includes('DBA') && m.content?.dbaName;
+                        }).length > 0 ? (
+                            (release.members || []).filter(m => {
+                                const roles = (m.user?.role || '').split(',');
+                                return roles.includes('DBA') && m.content?.dbaName;
+                            }).map(member => {
+                                const content = member.content || {};
+                                return (
+                                    <div key={member.id} className="prep-content-item">
+                                        <div className="prep-content-header">
+                                            <div className="prep-content-avatar">{(member.user?.name || '?')[0]}</div>
+                                            <div className="prep-content-info">
+                                                <span className="prep-content-name">{content.dbaName}</span>
+                                                <span className="prep-content-meta">{content.dbaPhone || '-'}</span>
+                                            </div>
+                                            <div className="prep-content-date">
+                                                审核时间：{content.dbaReviewDate ? new Date(content.dbaReviewDate).toLocaleDateString('zh-CN') : '未填写'}
+                                            </div>
+                                        </div>
+                                        {content.dbaReviewComment && (
+                                            <div className="prep-content-body">
+                                                <div className="prep-content-desc">
+                                                    <label>审核意见</label>
+                                                    <p>{content.dbaReviewComment}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="empty-hint">
+                                <span>📭</span>
+                                <p>暂无 DBA 审核信息</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* 运维信息 */}
+                <div className="card" style={{ marginTop: '20px' }}>
+                    <div className="card-header">
+                        <div>
+                            <h3 className="card-title">💾 运维信息</h3>
+                            <span className="card-subtitle">准备阶段运维人员提交的备份和回滚信息</span>
+                        </div>
+                    </div>
+                    <div className="prep-content-list">
+                        {(release.members || []).filter(m => {
+                            const roles = (m.user?.role || '').split(',');
+                            return roles.includes('OP') && m.content?.opName;
+                        }).length > 0 ? (
+                            (release.members || []).filter(m => {
+                                const roles = (m.user?.role || '').split(',');
+                                return roles.includes('OP') && m.content?.opName;
+                            }).map(member => {
+                                const content = member.content || {};
+                                return (
+                                    <div key={member.id} className="prep-content-item">
+                                        <div className="prep-content-header">
+                                            <div className="prep-content-avatar">{(member.user?.name || '?')[0]}</div>
+                                            <div className="prep-content-info">
+                                                <span className="prep-content-name">{content.opName}</span>
+                                                <span className="prep-content-meta">{content.opPhone || '-'}</span>
+                                            </div>
+                                            <div className="prep-content-date">
+                                                备份时间：{content.opBackupDate ? new Date(content.opBackupDate).toLocaleDateString('zh-CN') : '未填写'}
+                                            </div>
+                                        </div>
+                                        {content.rollbackPlan && (
+                                            <div className="prep-content-body">
+                                                <div className="prep-content-desc">
+                                                    <label>回滚方案</label>
+                                                    <p>{content.rollbackPlan}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="empty-hint">
+                                <span>📭</span>
+                                <p>暂无运维信息</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* DBA 执行结果填报（验证阶段及之后显示） */}
+                {(release.stage === 'VERIFICATION' || release.stage === 'COMPLETED') && (
+                    <div className="card" style={{ marginTop: '20px' }}>
+                        <div className="card-header">
+                            <div>
+                                <h3 className="card-title">📝 DBA 执行结果</h3>
+                                <span className="card-subtitle">实施阶段 DBA 填报的执行结果</span>
+                            </div>
+                        </div>
+                        <div className="prep-content-list">
+                            {(release.members || []).filter(m => {
+                                const roles = (m.user?.role || '').split(',');
+                                return roles.includes('DBA') && m.content?.dbaExecResult;
+                            }).length > 0 ? (
+                                (release.members || []).filter(m => {
+                                    const roles = (m.user?.role || '').split(',');
+                                    return roles.includes('DBA') && m.content?.dbaExecResult;
+                                }).map(member => {
+                                    const content = member.content || {};
+                                    return (
+                                        <div key={member.id} className="prep-content-item">
+                                            <div className="prep-content-header">
+                                                <div className="prep-content-avatar">{(member.user?.name || '?')[0]}</div>
+                                                <div className="prep-content-info">
+                                                    <span className="prep-content-name">{content.dbaExecName || content.dbaName || member.user?.name}</span>
+                                                    <span className="prep-content-meta">{content.dbaExecPhone || content.dbaPhone || '-'}</span>
+                                                </div>
+                                                <div className="prep-content-date">
+                                                    执行时间：{content.dbaExecTime ? new Date(content.dbaExecTime).toLocaleString('zh-CN') : '未填写'}
+                                                </div>
+                                            </div>
+                                            <div className="prep-content-body">
+                                                <div className="prep-content-desc">
+                                                    <label>执行结果</label>
+                                                    <p>{content.dbaExecResult}</p>
+                                                </div>
+                                                {content.dbaRollbackInfo && (
+                                                    <div className="prep-content-desc">
+                                                        <label>回滚信息</label>
+                                                        <p>{content.dbaRollbackInfo}</p>
+                                                    </div>
+                                                )}
+                                                {content.dbaExecRemark && (
+                                                    <div className="prep-content-desc">
+                                                        <label>备注</label>
+                                                        <p>{content.dbaExecRemark}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <div className="empty-hint">
+                                    <span>📭</span>
+                                    <p>暂无 DBA 执行结果</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* 相关文档 */}
+                <div className="card" style={{ marginTop: '20px' }}>
+                    <div className="card-header">
+                        <div>
+                            <h3 className="card-title">📎 相关文档</h3>
+                            <span className="card-subtitle">准备阶段上传的所有文档</span>
+                        </div>
+                    </div>
+                    <div className="prep-docs-list">
+                        {(release.documents || []).length > 0 ? (
+                            <div className="prep-docs-grid">
+                                {(release.documents || []).map(doc => (
+                                    <a 
+                                        key={doc.id} 
+                                        href={doc.filepath} 
+                                        target="_blank" 
+                                        className="prep-doc-item"
+                                    >
+                                        <span className="prep-doc-icon">{getFileIcon(doc.filename)}</span>
+                                        <div className="prep-doc-info">
+                                            <span className="prep-doc-name">{doc.filename}</span>
+                                            <span className="prep-doc-meta">
+                                                {typeLabels[doc.type] || doc.type} · {doc.uploadedBy?.name} · {new Date(doc.createdAt).toLocaleDateString('zh-CN')}
+                                            </span>
+                                        </div>
+                                    </a>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="empty-hint">
+                                <span>📭</span>
+                                <p>暂无上传文档</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </>
+        );
     };
 
     // 根据用户角色和阶段设置默认标签页
@@ -264,14 +643,16 @@ export default function ReleaseDetailPage({ params }) {
             setPoForm({
                 poName: c.poName || currentUser?.name || '',
                 poPhone: c.poPhone || currentUser?.phone || '',
-                poAcceptDate: c.poAcceptDate ? c.poAcceptDate.split('T')[0] : ''
+                poAcceptDate: c.poAcceptDate ? c.poAcceptDate.split('T')[0] : '',
+                poAcceptComment: c.poAcceptComment || ''
             });
 
             // 初始化 DBA 表单
             setDbaForm({
                 dbaName: c.dbaName || currentUser?.name || '',
                 dbaPhone: c.dbaPhone || currentUser?.phone || '',
-                dbaReviewDate: c.dbaReviewDate ? c.dbaReviewDate.split('T')[0] : ''
+                dbaReviewDate: c.dbaReviewDate ? c.dbaReviewDate.split('T')[0] : '',
+                dbaReviewComment: c.dbaReviewComment || ''
             });
 
             // 初始化 DBA 实施结果表单
@@ -379,6 +760,217 @@ export default function ReleaseDetailPage({ params }) {
             fetchReleaseDetail(token);
         } catch (e) {
             toast.error('提交失败');
+        }
+    };
+
+    // RD 开发人员自查清单提交前校验（校验通过后自动保存）
+    const validateRdBeforeSubmit = async (checkedMap) => {
+        // 检查是否有勾选的项
+        const hasCheckedItems = Object.values(checkedMap).some(v => v === true);
+        if (!hasCheckedItems) return true; // 没有勾选项，不需要校验
+
+        // 校验必填项
+        if (!contentForm.devName?.trim()) {
+            toast.error('请先填写开发人员姓名');
+            return false;
+        }
+        if (!contentForm.contentDesc?.trim()) {
+            toast.error('请先填写变更内容描述');
+            return false;
+        }
+        // 如果有数据库变更，校验数据库变更必填项
+        if (hasDbChange && contentForm.dbChanges.length === 0) {
+            toast.error('请先添加数据库变更记录');
+            return false;
+        }
+        
+        // 校验通过，先保存表单
+        try {
+            const res = await fetch(`/api/releases/${params.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
+                    action: 'update_member_content',
+                    ...contentForm,
+                }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                toast.error(data.error || '保存失败');
+                return false;
+            }
+            toast.success('表单已自动保存');
+            return true;
+        } catch (error) {
+            toast.error('保存失败');
+            return false;
+        }
+    };
+
+    // QA 测试人员自查清单提交前校验（校验通过后自动保存）
+    const validateQaBeforeSubmit = async (checkedMap) => {
+        const hasCheckedItems = Object.values(checkedMap).some(v => v === true);
+        if (!hasCheckedItems) return true;
+
+        if (!qaForm.qaName?.trim()) {
+            toast.error('请先填写测试人员姓名');
+            return false;
+        }
+        if (!qaForm.qaTestDate) {
+            toast.error('请先填写测试时间');
+            return false;
+        }
+        // 检查是否上传了测试报告
+        const qaDocuments = (release.documents || []).filter(d => 
+            d.uploadedById === user?.id
+        );
+        if (qaDocuments.length === 0) {
+            toast.error('请先上传测试用例或测试报告');
+            return false;
+        }
+        
+        // 校验通过，先保存表单
+        try {
+            const res = await fetch(`/api/releases/${params.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
+                    action: 'update_qa_content',
+                    ...qaForm,
+                }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                toast.error(data.error || '保存失败');
+                return false;
+            }
+            toast.success('表单已自动保存');
+            return true;
+        } catch (error) {
+            toast.error('保存失败');
+            return false;
+        }
+    };
+
+    // PO 产品人员自查清单提交前校验（校验通过后自动保存）
+    const validatePoBeforeSubmit = async (checkedMap) => {
+        const hasCheckedItems = Object.values(checkedMap).some(v => v === true);
+        if (!hasCheckedItems) return true;
+
+        if (!poForm.poName?.trim()) {
+            toast.error('请先填写产品人员姓名');
+            return false;
+        }
+        if (!poForm.poAcceptDate) {
+            toast.error('请先填写验收时间');
+            return false;
+        }
+        
+        // 校验通过，先保存表单
+        try {
+            const res = await fetch(`/api/releases/${params.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
+                    action: 'update_po_content',
+                    ...poForm,
+                }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                toast.error(data.error || '保存失败');
+                return false;
+            }
+            toast.success('表单已自动保存');
+            return true;
+        } catch (error) {
+            toast.error('保存失败');
+            return false;
+        }
+    };
+
+    // DBA 自查清单提交前校验（校验通过后自动保存）
+    const validateDbaBeforeSubmit = async (checkedMap) => {
+        const hasCheckedItems = Object.values(checkedMap).some(v => v === true);
+        if (!hasCheckedItems) return true;
+
+        if (!dbaForm.dbaReviewDate) {
+            toast.error('请先填写审核时间');
+            return false;
+        }
+        
+        // 校验通过，先保存表单
+        try {
+            const res = await fetch(`/api/releases/${params.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
+                    action: 'update_dba_content',
+                    ...dbaForm,
+                }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                toast.error(data.error || '保存失败');
+                return false;
+            }
+            toast.success('表单已自动保存');
+            return true;
+        } catch (error) {
+            toast.error('保存失败');
+            return false;
+        }
+    };
+
+    // OP 运维人员自查清单提交前校验（校验通过后自动保存）
+    const validateOpBeforeSubmit = async (checkedMap) => {
+        const hasCheckedItems = Object.values(checkedMap).some(v => v === true);
+        if (!hasCheckedItems) return true;
+
+        if (!opForm.opName?.trim()) {
+            toast.error('请先填写运维人员姓名');
+            return false;
+        }
+        if (!opForm.opBackupDate) {
+            toast.error('请先填写备份时间');
+            return false;
+        }
+        
+        // 校验通过，先保存表单
+        try {
+            const res = await fetch(`/api/releases/${params.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
+                    action: 'update_op_content',
+                    ...opForm,
+                }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                toast.error(data.error || '保存失败');
+                return false;
+            }
+            toast.success('表单已自动保存');
+            return true;
+        } catch (error) {
+            toast.error('保存失败');
+            return false;
         }
     };
 
@@ -722,6 +1314,9 @@ export default function ReleaseDetailPage({ params }) {
 
     // 推进阶段
     const executeAdvanceStage = async () => {
+        // 先关闭确认弹窗
+        setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+        
         setActionLoading(true);
         const token = localStorage.getItem('token');
         try {
@@ -743,6 +1338,12 @@ export default function ReleaseDetailPage({ params }) {
                 return;
             }
             toast.success('已推进到下一阶段');
+            
+            // 如果推进到完成阶段，自动切换到发版总结 tab
+            if (data.release?.stage === 'COMPLETED') {
+                setActiveTab('summary');
+            }
+            
             fetchReleaseDetail(token);
         } catch (error) {
             console.error('推进阶段失败:', error);
@@ -765,6 +1366,9 @@ export default function ReleaseDetailPage({ params }) {
 
     // 回滚
     const executeRollback = async () => {
+        // 先关闭确认弹窗
+        setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+        
         setActionLoading(true);
         const token = localStorage.getItem('token');
         try {
@@ -794,6 +1398,44 @@ export default function ReleaseDetailPage({ params }) {
         });
     };
 
+    // 删除发版
+    const executeDelete = async () => {
+        // 先关闭确认弹窗
+        setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+        
+        setDeleteLoading(true);
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch(`/api/releases/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                toast.error(data.error || '删除失败');
+                return;
+            }
+            toast.success('发版记录已删除');
+            router.push('/releases');
+        } catch (error) {
+            console.error('删除发版失败:', error);
+            toast.error('删除操作失败');
+        } finally {
+            setDeleteLoading(false);
+        }
+    };
+
+    const handleDelete = () => {
+        setConfirmConfig({
+            isOpen: true,
+            title: '确认删除',
+            message: '⚠️ 确定要删除此发版记录吗？删除后所有相关数据（成员、检查清单、文档等）将被永久删除，此操作不可撤销！',
+            type: 'danger',
+            confirmText: '确定删除',
+            onConfirm: executeDelete
+        });
+    };
+
     // 上传成功后只更新文档列表，不刷新整个页面数据（避免丢失未保存的表单内容）
     const handleUploadSuccess = (document) => {
         // 将新上传的文档添加到现有文档列表中
@@ -802,6 +1444,66 @@ export default function ReleaseDetailPage({ params }) {
             documents: [document, ...(prev.documents || [])]
         }));
         toast.success(`文件 ${document?.filename || ''} 上传成功`);
+    };
+
+    // 删除文档确认弹窗状态
+    const [deleteDocConfig, setDeleteDocConfig] = useState({
+        isOpen: false,
+        docId: null,
+        filename: ''
+    });
+
+    // 删除文档
+    const handleDeleteDocument = (docId, filename, e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        setDeleteDocConfig({
+            isOpen: true,
+            docId,
+            filename
+        });
+    };
+
+    // 执行删除文档
+    const executeDeleteDocument = async () => {
+        const { docId } = deleteDocConfig;
+        setDeleteDocConfig(prev => ({ ...prev, isOpen: false }));
+        
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch(`/api/upload/${docId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || '删除失败');
+            }
+            
+            // 从列表中移除
+            setRelease(prev => ({
+                ...prev,
+                documents: (prev.documents || []).filter(d => d.id !== docId)
+            }));
+            toast.success('文件删除成功');
+        } catch (error) {
+            toast.error(error.message);
+        }
+    };
+
+    // 检查是否可以删除文档
+    const canDeleteDocument = (doc) => {
+        if (!user) return false;
+        const userRoles = (user.role || '').split(',');
+        const isAdmin = userRoles.includes('ADMIN');
+        const isPM = userRoles.includes('PM');
+        const isUploader = doc.uploadedById === user.id;
+        const isReleaseCreator = release?.createdById === user.id;
+        
+        // 上传者本人、ADMIN、或 PM 且是发版创建者
+        return isUploader || isAdmin || (isPM && isReleaseCreator);
     };
 
     if (loading) return <div className="loading"><div className="loading-spinner"></div></div>;
@@ -881,9 +1583,21 @@ export default function ReleaseDetailPage({ params }) {
                                 由 {release.createdBy?.name} 创建于 {new Date(release.createdAt).toLocaleString('zh-CN')}
                             </p>
                         </div>
-                        <button className="btn btn-secondary" onClick={() => router.push('/releases')}>
-                            ← 返回列表
-                        </button>
+                        <div className="header-actions">
+                            {/* 删除按钮：只有 ADMIN 或发版创建者可见 */}
+                            {(isAdmin || isCreator) && (
+                                <button 
+                                    className="btn btn-danger btn-sm" 
+                                    onClick={handleDelete}
+                                    disabled={deleteLoading}
+                                >
+                                    {deleteLoading ? '删除中...' : '🗑️ 删除发版'}
+                                </button>
+                            )}
+                            <button className="btn btn-secondary" onClick={() => router.push('/releases')}>
+                                ← 返回列表
+                            </button>
+                        </div>
                     </div>
 
                     {/* 流程进度（含阶段指引） */}
@@ -1028,11 +1742,10 @@ export default function ReleaseDetailPage({ params }) {
                                                     </div>
                                                     <div className="form-group">
                                                         <label className="form-label">计划时间</label>
-                                                        <input
-                                                            type="date"
-                                                            className="form-input"
+                                                        <DatePicker
                                                             value={infoForm.plannedDate}
-                                                            onChange={e => setInfoForm({ ...infoForm, plannedDate: e.target.value })}
+                                                            onChange={value => setInfoForm({ ...infoForm, plannedDate: value })}
+                                                            placeholder="选择计划日期"
                                                         />
                                                     </div>
                                                 </div>
@@ -1233,7 +1946,7 @@ export default function ReleaseDetailPage({ params }) {
                                                         }).map(member => {
                                                             const content = member.content || {};
                                                             return (
-                                                                <div key={member.id} className="prep-content-item compact">
+                                                                <div key={member.id} className="prep-content-item">
                                                                     <div className="prep-content-header">
                                                                         <div className="prep-content-avatar">{(member.user?.name || '?')[0]}</div>
                                                                         <div className="prep-content-info">
@@ -1244,6 +1957,14 @@ export default function ReleaseDetailPage({ params }) {
                                                                             审核时间：{content.dbaReviewDate ? new Date(content.dbaReviewDate).toLocaleDateString('zh-CN') : '未填写'}
                                                                         </div>
                                                                     </div>
+                                                                    {content.dbaReviewComment && (
+                                                                        <div className="prep-content-body">
+                                                                            <div className="prep-content-desc">
+                                                                                <label>审核意见</label>
+                                                                                <p>{content.dbaReviewComment}</p>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             );
                                                         })
@@ -1306,6 +2027,68 @@ export default function ReleaseDetailPage({ params }) {
                                                 </div>
                                             </div>
 
+                                            {/* DBA 执行结果填报（验证阶段及之后显示） */}
+                                            {(release.stage === 'VERIFICATION' || release.stage === 'COMPLETED') && (
+                                                <div className="card" style={{ marginTop: '20px' }}>
+                                                    <div className="card-header">
+                                                        <div>
+                                                            <h3 className="card-title">📝 DBA 执行结果</h3>
+                                                            <span className="card-subtitle">实施阶段 DBA 填报的执行结果</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="prep-content-list">
+                                                        {(release.members || []).filter(m => {
+                                                            const roles = (m.user?.role || '').split(',');
+                                                            return roles.includes('DBA') && m.content?.dbaExecResult;
+                                                        }).length > 0 ? (
+                                                            (release.members || []).filter(m => {
+                                                                const roles = (m.user?.role || '').split(',');
+                                                                return roles.includes('DBA') && m.content?.dbaExecResult;
+                                                            }).map(member => {
+                                                                const content = member.content || {};
+                                                                return (
+                                                                    <div key={member.id} className="prep-content-item">
+                                                                        <div className="prep-content-header">
+                                                                            <div className="prep-content-avatar">{(member.user?.name || '?')[0]}</div>
+                                                                            <div className="prep-content-info">
+                                                                                <span className="prep-content-name">{content.dbaExecName || content.dbaName || member.user?.name}</span>
+                                                                                <span className="prep-content-meta">{content.dbaExecPhone || content.dbaPhone || '-'}</span>
+                                                                            </div>
+                                                                            <div className="prep-content-date">
+                                                                                执行时间：{content.dbaExecTime ? new Date(content.dbaExecTime).toLocaleString('zh-CN') : '未填写'}
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="prep-content-body">
+                                                                            <div className="prep-content-desc">
+                                                                                <label>执行结果</label>
+                                                                                <p>{content.dbaExecResult}</p>
+                                                                            </div>
+                                                                            {content.dbaRollbackInfo && (
+                                                                                <div className="prep-content-desc">
+                                                                                    <label>回滚信息</label>
+                                                                                    <p>{content.dbaRollbackInfo}</p>
+                                                                                </div>
+                                                                            )}
+                                                                            {content.dbaExecRemark && (
+                                                                                <div className="prep-content-desc">
+                                                                                    <label>备注</label>
+                                                                                    <p>{content.dbaExecRemark}</p>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })
+                                                        ) : (
+                                                            <div className="empty-hint">
+                                                                <span>📭</span>
+                                                                <p>暂无 DBA 执行结果</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             {/* 相关文档 */}
                                             <div className="card" style={{ marginTop: '20px' }}>
                                                 <div className="card-header">
@@ -1333,7 +2116,7 @@ export default function ReleaseDetailPage({ params }) {
                                                                         target="_blank" 
                                                                         className="prep-doc-item"
                                                                     >
-                                                                        <div className="prep-doc-icon">📄</div>
+                                                                        <span className="prep-doc-icon">{getFileIcon(doc.filename)}</span>
                                                                         <div className="prep-doc-info">
                                                                             <span className="prep-doc-name">{doc.filename}</span>
                                                                             <span className="prep-doc-meta">
@@ -1704,6 +2487,14 @@ export default function ReleaseDetailPage({ params }) {
                                                             <div className="pm-dba-progress-bar">
                                                                 <div className="pm-dba-progress-fill" style={{ width: `${progress}%` }}></div>
                                                             </div>
+                                                            
+                                                            {/* DBA 审核意见 */}
+                                                            {content.dbaReviewComment && (
+                                                                <div className="pm-dba-comment">
+                                                                    <span className="pm-dba-comment-label">审核意见</span>
+                                                                    <p className="pm-dba-comment-text">{content.dbaReviewComment}</p>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     );
                                                 })
@@ -1716,8 +2507,13 @@ export default function ReleaseDetailPage({ params }) {
                                         </div>
                                         
                                         {/* 数据库变更汇总 */}
-                                        <div className="pm-db-summary">
-                                            <h4>📊 数据库变更汇总</h4>
+                                        <div className="db-change-summary-card">
+                                            <div className="db-change-summary-header">
+                                                <div className="db-change-summary-icon">
+                                                    <span>📊</span>
+                                                </div>
+                                                <h4 className="db-change-summary-title">数据库变更汇总</h4>
+                                            </div>
                                             {(() => {
                                                 const allDbChanges = (release.members || [])
                                                     .filter(m => m.content?.dbChanges?.length > 0)
@@ -1727,18 +2523,27 @@ export default function ReleaseDetailPage({ params }) {
                                                     })));
                                                 
                                                 if (allDbChanges.length === 0) {
-                                                    return <p className="pm-db-summary-empty">本次发版无数据库变更</p>;
+                                                    return (
+                                                        <div className="db-change-summary-empty">
+                                                            <span className="empty-icon">📭</span>
+                                                            <p>本次发版无数据库变更</p>
+                                                        </div>
+                                                    );
                                                 }
                                                 
+                                                const affectsOnlineCount = allDbChanges.filter(d => d.affectsOnline).length;
+                                                
                                                 return (
-                                                    <div className="pm-db-summary-stats">
-                                                        <div className="pm-db-summary-item">
-                                                            <span className="pm-db-summary-num">{allDbChanges.length}</span>
-                                                            <span className="pm-db-summary-label">总变更数</span>
-                                                        </div>
-                                                        <div className="pm-db-summary-item warning">
-                                                            <span className="pm-db-summary-num">{allDbChanges.filter(d => d.affectsOnline).length}</span>
-                                                            <span className="pm-db-summary-label">影响线上</span>
+                                                    <div className="db-change-summary-content">
+                                                        <div className="db-change-stat-grid">
+                                                            <div className="db-change-stat-item">
+                                                                <div className="db-change-stat-value">{allDbChanges.length}</div>
+                                                                <div className="db-change-stat-label">总变更数</div>
+                                                            </div>
+                                                            <div className={`db-change-stat-item ${affectsOnlineCount > 0 ? 'warning' : 'safe'}`}>
+                                                                <div className="db-change-stat-value">{affectsOnlineCount}</div>
+                                                                <div className="db-change-stat-label">影响线上</div>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 );
@@ -1993,13 +2798,7 @@ export default function ReleaseDetailPage({ params }) {
                             {/* 发版总结标签页（完成/回滚阶段） */}
                             {activeTab === 'summary' && (
                                 <div className="tab-content">
-                                    <div className="card">
-                                        <div className="card-header">
-                                            <h3 className="card-title">📊 发版总结</h3>
-                                            <p className="card-subtitle">本次发版的完整记录和统计信息</p>
-                                        </div>
-                                        <ReleaseSummary release={release} checklists={enrichedChecklists} />
-                                    </div>
+                                    <ReleaseSummary release={release} checklists={enrichedChecklists} />
                                 </div>
                             )}
                         </div>
@@ -2065,6 +2864,9 @@ export default function ReleaseDetailPage({ params }) {
                                             <p>{release.description || '暂无描述'}</p>
                                         </div>
                                     </div>
+                                    
+                                    {/* 实施/验证阶段显示所有填报内容 */}
+                                    {renderImplementationStageContent()}
                                 </div>
                             )}
 
@@ -2114,16 +2916,13 @@ export default function ReleaseDetailPage({ params }) {
                                                 </div>
                                                 <div className="form-group">
                                                     <label className="form-label label-required">所属系统</label>
-                                                    <select
-                                                        className="form-input"
-                                                        disabled={!canEditContent}
+                                                    <CustomSelect
+                                                        options={systemOptions.map(opt => ({ value: opt.name, label: opt.name }))}
                                                         value={contentForm.system}
-                                                        onChange={e => setContentForm({ ...contentForm, system: e.target.value })}
-                                                    >
-                                                        {systemOptions.map(opt => (
-                                                            <option key={opt.code} value={opt.name}>{opt.name}</option>
-                                                        ))}
-                                                    </select>
+                                                        onChange={(val) => setContentForm({ ...contentForm, system: val })}
+                                                        disabled={!canEditContent}
+                                                        placeholder="请选择所属系统"
+                                                    />
                                                 </div>
                                             </div>
                                             <div className="form-group">
@@ -2194,16 +2993,13 @@ export default function ReleaseDetailPage({ params }) {
                                                             <div className="form-row form-row-4">
                                                                 <div className="form-group">
                                                                     <label className="form-label label-required">变更类型</label>
-                                                                    <select 
-                                                                        className="form-input" 
-                                                                        disabled={!canEditContent} 
-                                                                        value={db.changeType} 
-                                                                        onChange={e => updateDbChange(idx, 'changeType', e.target.value)}
-                                                                    >
-                                                                        {dbChangeTypes.map(t => (
-                                                                            <option key={t.code} value={t.name}>{t.name}</option>
-                                                                        ))}
-                                                                    </select>
+                                                                    <CustomSelect
+                                                                        options={dbChangeTypes.map(t => ({ value: t.name, label: t.name }))}
+                                                                        value={db.changeType}
+                                                                        onChange={(val) => updateDbChange(idx, 'changeType', val)}
+                                                                        disabled={!canEditContent}
+                                                                        placeholder="请选择变更类型"
+                                                                    />
                                                                 </div>
                                                                 <div className="form-group">
                                                                     <label className="form-label label-required">数据库名</label>
@@ -2392,9 +3188,8 @@ export default function ReleaseDetailPage({ params }) {
                                                 {canEditContent && (
                                                     <FileUpload
                                                         releaseId={release.id}
-                                                        documents={release.documents || []}
                                                         onUploadSuccess={handleUploadSuccess}
-                                                        showList={false}
+                                                        compact={true}
                                                         label="📤 上传文件"
                                                     />
                                                 )}
@@ -2404,15 +3199,25 @@ export default function ReleaseDetailPage({ params }) {
                                             <div className="file-list-grid">
                                                 {(release.documents || []).length > 0 ? (
                                                     release.documents.map(doc => (
-                                                        <a 
-                                                            key={doc.id} 
-                                                            href={doc.filepath} 
-                                                            target="_blank" 
-                                                            className="file-item-card"
-                                                        >
-                                                            <span className="file-icon">📄</span>
-                                                            <span className="file-name">{doc.filename}</span>
-                                                        </a>
+                                                        <div key={doc.id} className="file-item-card">
+                                                            <a 
+                                                                href={doc.filepath} 
+                                                                target="_blank" 
+                                                                className="file-item-link"
+                                                            >
+                                                                <span className="file-icon">📄</span>
+                                                                <span className="file-name">{doc.filename}</span>
+                                                            </a>
+                                                            {canDeleteDocument(doc) && (
+                                                                <button 
+                                                                    className="file-delete-btn"
+                                                                    onClick={(e) => handleDeleteDocument(doc.id, doc.filename, e)}
+                                                                    title="删除文件"
+                                                                >
+                                                                    ✕
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     ))
                                                 ) : (
                                                     <div className="empty-hint small">
@@ -2440,6 +3245,7 @@ export default function ReleaseDetailPage({ params }) {
                                             stage={release.stage}
                                             userRole={user?.role}
                                             onSubmit={handleChecklistBatchSubmit}
+                                            onBeforeSubmit={validateRdBeforeSubmit}
                                         />
                                     </div>
                                 </div>
@@ -2513,6 +3319,9 @@ export default function ReleaseDetailPage({ params }) {
                                             <p>{release.description || '暂无描述'}</p>
                                         </div>
                                     </div>
+                                    
+                                    {/* 实施/验证阶段显示所有填报内容 */}
+                                    {renderImplementationStageContent()}
                                 </div>
                             )}
 
@@ -2526,51 +3335,68 @@ export default function ReleaseDetailPage({ params }) {
                                         </div>
                                         
                                         <div className="dev-changes-grid">
-                                            {(release.members || []).filter(m => m.content).length > 0 ? (
-                                                (release.members || []).map(member => {
-                                                    const content = member.content;
-                                                    if (!content) return null;
+                                            {(() => {
+                                                // 只过滤 RD 角色的成员
+                                                const rdMembers = (release.members || []).filter(m => {
+                                                    const memberRole = m.role || '';
+                                                    const userRoles = (m.user?.role || '').split(',');
+                                                    return (memberRole === 'RD' || userRoles.includes('RD')) && m.content;
+                                                });
+                                                
+                                                if (rdMembers.length > 0) {
+                                                    return rdMembers.map(member => {
+                                                        const content = member.content;
+                                                        return (
+                                                            <div 
+                                                                key={member.id} 
+                                                                className="dev-change-card clickable"
+                                                                onClick={() => setViewingMember(member)}
+                                                            >
+                                                                <div className="dev-change-header">
+                                                                    <div className="dev-avatar">
+                                                                        {(member.user?.name || '?')[0]}
+                                                                    </div>
+                                                                    <div className="dev-info">
+                                                                        <span className="dev-name">{member.user?.name || '未知'}</span>
+                                                                        <span className="dev-phone">{content.devPhone || '-'}</span>
+                                                                    </div>
+                                                                    <span className="dev-system-badge">{content.system || '门户'}</span>
+                                                                </div>
+                                                                <div className="dev-change-content">
+                                                                    <label>发版涉及内容说明</label>
+                                                                    <p>{content.contentDesc || '暂无说明'}</p>
+                                                                </div>
+                                                                <div className="dev-change-stats">
+                                                                    <div className="stat-item">
+                                                                        <span className="stat-icon">🗄️</span>
+                                                                        <span className="stat-label">数据库变更</span>
+                                                                        <span className={`stat-value ${(content.dbChanges?.length || 0) > 0 ? 'has-change' : ''}`}>
+                                                                            {content.dbChanges?.length || 0} 条
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="stat-item">
+                                                                        <span className="stat-icon">⚙️</span>
+                                                                        <span className="stat-label">配置变更</span>
+                                                                        <span className={`stat-value ${(content.configChanges?.length || 0) > 0 ? 'has-change' : ''}`}>
+                                                                            {content.configChanges?.length || 0} 条
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="dev-change-footer">
+                                                                    <span className="view-detail-hint">点击查看详情 →</span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    });
+                                                } else {
                                                     return (
-                                                        <div key={member.id} className="dev-change-card">
-                                                            <div className="dev-change-header">
-                                                                <div className="dev-avatar">
-                                                                    {(member.user?.name || '?')[0]}
-                                                                </div>
-                                                                <div className="dev-info">
-                                                                    <span className="dev-name">{member.user?.name || '未知'}</span>
-                                                                    <span className="dev-phone">{content.devPhone || '-'}</span>
-                                                                </div>
-                                                                <span className="dev-system-badge">{content.system || '门户'}</span>
-                                                            </div>
-                                                            <div className="dev-change-content">
-                                                                <label>发版涉及内容说明</label>
-                                                                <p>{content.contentDesc || '暂无说明'}</p>
-                                                            </div>
-                                                            <div className="dev-change-stats">
-                                                                <div className="stat-item">
-                                                                    <span className="stat-icon">🗄️</span>
-                                                                    <span className="stat-label">数据库变更</span>
-                                                                    <span className={`stat-value ${(content.dbChanges?.length || 0) > 0 ? 'has-change' : ''}`}>
-                                                                        {content.dbChanges?.length || 0} 条
-                                                                    </span>
-                                                                </div>
-                                                                <div className="stat-item">
-                                                                    <span className="stat-icon">⚙️</span>
-                                                                    <span className="stat-label">配置变更</span>
-                                                                    <span className={`stat-value ${(content.configChanges?.length || 0) > 0 ? 'has-change' : ''}`}>
-                                                                        {content.configChanges?.length || 0} 条
-                                                                    </span>
-                                                                </div>
-                                                            </div>
+                                                        <div className="empty-hint">
+                                                            <span>📭</span>
+                                                            <p>暂无开发人员提交变更内容</p>
                                                         </div>
                                                     );
-                                                })
-                                            ) : (
-                                                <div className="empty-hint">
-                                                    <span>📭</span>
-                                                    <p>暂无开发人员提交变更内容</p>
-                                                </div>
-                                            )}
+                                                }
+                                            })()}
                                         </div>
                                     </div>
                                 </div>
@@ -2622,12 +3448,11 @@ export default function ReleaseDetailPage({ params }) {
                                                 </div>
                                                 <div className="form-group">
                                                     <label className="form-label label-required">测试时间</label>
-                                                    <input
-                                                        type="date"
-                                                        className="form-input"
-                                                        disabled={!canEditQaContent}
+                                                    <DatePicker
                                                         value={qaForm.qaTestDate}
-                                                        onChange={e => setQaForm({ ...qaForm, qaTestDate: e.target.value })}
+                                                        onChange={value => setQaForm({ ...qaForm, qaTestDate: value })}
+                                                        placeholder="选择测试日期"
+                                                        disabled={!canEditQaContent}
                                                     />
                                                 </div>
                                             </div>
@@ -2640,51 +3465,45 @@ export default function ReleaseDetailPage({ params }) {
                                                 <span className="required-hint">* 必须上传测试用例和测试报告</span>
                                             </div>
                                             
-                                            <div className="upload-area">
-                                                <div className="upload-hint">
-                                                    <p>📋 请上传以下文件：</p>
-                                                    <ul>
-                                                        <li>测试用例文档</li>
-                                                        <li>测试报告</li>
-                                                    </ul>
+                                            <div className="upload-area-compact">
+                                                <div className="upload-hint-inline">
+                                                    <span>📋 请上传：测试用例文档、测试报告</span>
                                                 </div>
-                                                
                                                 {canEditQaContent && (
-                                                    <div className="upload-btn-wrapper">
-                                                        <FileUpload
-                                                            releaseId={release.id}
-                                                            documents={release.documents || []}
-                                                            onUploadSuccess={handleUploadSuccess}
-                                                            showList={false}
-                                                            label="📤 点击上传文件"
-                                                        />
-                                                    </div>
+                                                    <FileUpload
+                                                        releaseId={release.id}
+                                                        onUploadSuccess={handleUploadSuccess}
+                                                        compact={true}
+                                                        label="📤 上传文件"
+                                                    />
                                                 )}
                                             </div>
 
-                                            <div className="uploaded-files">
-                                                <h5>已上传的文件</h5>
+                                            {(release.documents || []).length > 0 && (
                                                 <div className="file-list-grid">
-                                                    {(release.documents || []).length > 0 ? (
-                                                        release.documents.map(doc => (
+                                                    {release.documents.map(doc => (
+                                                        <div key={doc.id} className="file-item-card">
                                                             <a 
-                                                                key={doc.id} 
                                                                 href={doc.filepath} 
                                                                 target="_blank" 
-                                                                className="file-item-card"
+                                                                className="file-item-link"
                                                             >
                                                                 <span className="file-icon">📄</span>
                                                                 <span className="file-name">{doc.filename}</span>
                                                             </a>
-                                                        ))
-                                                    ) : (
-                                                        <div className="empty-hint small">
-                                                            <span>📭</span>
-                                                            <p>暂无上传文件</p>
+                                                            {canDeleteDocument(doc) && (
+                                                                <button 
+                                                                    className="file-delete-btn"
+                                                                    onClick={(e) => handleDeleteDocument(doc.id, doc.filename, e)}
+                                                                    title="删除文件"
+                                                                >
+                                                                    ✕
+                                                                </button>
+                                                            )}
                                                         </div>
-                                                    )}
+                                                    ))}
                                                 </div>
-                                            </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -2706,6 +3525,7 @@ export default function ReleaseDetailPage({ params }) {
                                                 stage={release.stage}
                                                 userRole={user?.role}
                                                 onSubmit={handleChecklistBatchSubmit}
+                                                onBeforeSubmit={validateQaBeforeSubmit}
                                             />
                                         ) : (
                                             /* 如果没有数据库检查清单，显示静态清单（需要先被添加为成员） */
@@ -2759,12 +3579,6 @@ export default function ReleaseDetailPage({ params }) {
                                             🧪 测试完成情况
                                         </button>
                                         <button 
-                                            className={`tab-btn ${activeTab === 'acceptance' ? 'active' : ''}`}
-                                            onClick={() => setActiveTab('acceptance')}
-                                        >
-                                            ✅ 功能验收
-                                        </button>
-                                        <button 
                                             className={`tab-btn ${activeTab === 'checklist' ? 'active' : ''}`}
                                             onClick={() => setActiveTab('checklist')}
                                         >
@@ -2804,6 +3618,9 @@ export default function ReleaseDetailPage({ params }) {
                                             <p>{release.description || '暂无描述'}</p>
                                         </div>
                                     </div>
+                                    
+                                    {/* 实施/验证阶段显示所有填报内容 */}
+                                    {renderImplementationStageContent()}
                                 </div>
                             )}
 
@@ -2817,51 +3634,68 @@ export default function ReleaseDetailPage({ params }) {
                                         </div>
                                         
                                         <div className="dev-changes-grid">
-                                            {(release.members || []).filter(m => m.content).length > 0 ? (
-                                                (release.members || []).map(member => {
-                                                    const content = member.content;
-                                                    if (!content) return null;
+                                            {(() => {
+                                                // 只过滤 RD 角色的成员
+                                                const rdMembers = (release.members || []).filter(m => {
+                                                    const memberRole = m.role || '';
+                                                    const userRoles = (m.user?.role || '').split(',');
+                                                    return (memberRole === 'RD' || userRoles.includes('RD')) && m.content;
+                                                });
+                                                
+                                                if (rdMembers.length > 0) {
+                                                    return rdMembers.map(member => {
+                                                        const content = member.content;
+                                                        return (
+                                                            <div 
+                                                                key={member.id} 
+                                                                className="dev-change-card clickable"
+                                                                onClick={() => setViewingMember(member)}
+                                                            >
+                                                                <div className="dev-change-header">
+                                                                    <div className="dev-avatar">
+                                                                        {(member.user?.name || '?')[0]}
+                                                                    </div>
+                                                                    <div className="dev-info">
+                                                                        <span className="dev-name">{member.user?.name || '未知'}</span>
+                                                                        <span className="dev-phone">{content.devPhone || '-'}</span>
+                                                                    </div>
+                                                                    <span className="dev-system-badge">{content.system || '门户'}</span>
+                                                                </div>
+                                                                <div className="dev-change-content">
+                                                                    <label>发版涉及内容说明</label>
+                                                                    <p>{content.contentDesc || '暂无说明'}</p>
+                                                                </div>
+                                                                <div className="dev-change-stats">
+                                                                    <div className="stat-item">
+                                                                        <span className="stat-icon">🗄️</span>
+                                                                        <span className="stat-label">数据库变更</span>
+                                                                        <span className={`stat-value ${(content.dbChanges?.length || 0) > 0 ? 'has-change' : ''}`}>
+                                                                            {content.dbChanges?.length || 0} 条
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="stat-item">
+                                                                        <span className="stat-icon">⚙️</span>
+                                                                        <span className="stat-label">配置变更</span>
+                                                                        <span className={`stat-value ${(content.configChanges?.length || 0) > 0 ? 'has-change' : ''}`}>
+                                                                            {content.configChanges?.length || 0} 条
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="dev-change-footer">
+                                                                    <span className="view-detail-hint">点击查看详情 →</span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    });
+                                                } else {
                                                     return (
-                                                        <div key={member.id} className="dev-change-card">
-                                                            <div className="dev-change-header">
-                                                                <div className="dev-avatar">
-                                                                    {(member.user?.name || '?')[0]}
-                                                                </div>
-                                                                <div className="dev-info">
-                                                                    <span className="dev-name">{member.user?.name || '未知'}</span>
-                                                                    <span className="dev-phone">{content.devPhone || '-'}</span>
-                                                                </div>
-                                                                <span className="dev-system-badge">{content.system || '门户'}</span>
-                                                            </div>
-                                                            <div className="dev-change-content">
-                                                                <label>发版涉及内容说明</label>
-                                                                <p>{content.contentDesc || '暂无说明'}</p>
-                                                            </div>
-                                                            <div className="dev-change-stats">
-                                                                <div className="stat-item">
-                                                                    <span className="stat-icon">🗄️</span>
-                                                                    <span className="stat-label">数据库变更</span>
-                                                                    <span className={`stat-value ${(content.dbChanges?.length || 0) > 0 ? 'has-change' : ''}`}>
-                                                                        {content.dbChanges?.length || 0} 条
-                                                                    </span>
-                                                                </div>
-                                                                <div className="stat-item">
-                                                                    <span className="stat-icon">⚙️</span>
-                                                                    <span className="stat-label">配置变更</span>
-                                                                    <span className={`stat-value ${(content.configChanges?.length || 0) > 0 ? 'has-change' : ''}`}>
-                                                                        {content.configChanges?.length || 0} 条
-                                                                    </span>
-                                                                </div>
-                                                            </div>
+                                                        <div className="empty-hint">
+                                                            <span>📭</span>
+                                                            <p>暂无开发人员提交变更内容</p>
                                                         </div>
                                                     );
-                                                })
-                                            ) : (
-                                                <div className="empty-hint">
-                                                    <span>📭</span>
-                                                    <p>暂无开发人员提交变更内容</p>
-                                                </div>
-                                            )}
+                                                }
+                                            })()}
                                         </div>
                                     </div>
                                 </div>
@@ -2930,25 +3764,44 @@ export default function ReleaseDetailPage({ params }) {
                                                             {/* 测试报告链接 */}
                                                             <div className="qa-reports">
                                                                 <span className="qa-reports-label">📄 测试报告：</span>
-                                                                {(release.documents || []).length > 0 ? (
-                                                                    <div className="qa-reports-list">
-                                                                        {release.documents.slice(0, 3).map(doc => (
-                                                                            <a 
-                                                                                key={doc.id} 
-                                                                                href={doc.filepath} 
-                                                                                target="_blank" 
-                                                                                className="qa-report-link"
-                                                                            >
-                                                                                {doc.filename}
-                                                                            </a>
-                                                                        ))}
-                                                                        {release.documents.length > 3 && (
-                                                                            <span className="qa-reports-more">+{release.documents.length - 3} 更多</span>
-                                                                        )}
-                                                                    </div>
-                                                                ) : (
-                                                                    <span className="qa-no-report">暂无上传</span>
-                                                                )}
+                                                                {(() => {
+                                                                    // 筛选该成员上传的文档
+                                                                    const memberDocs = (release.documents || []).filter(
+                                                                        doc => doc.uploadedById === member.userId
+                                                                    );
+                                                                    const isExpanded = expandedDocMembers[member.id];
+                                                                    const displayDocs = isExpanded ? memberDocs : memberDocs.slice(0, 3);
+                                                                    
+                                                                    if (memberDocs.length > 0) {
+                                                                        return (
+                                                                            <div className="qa-reports-list">
+                                                                                {displayDocs.map(doc => (
+                                                                                    <a 
+                                                                                        key={doc.id} 
+                                                                                        href={doc.filepath} 
+                                                                                        target="_blank" 
+                                                                                        className="qa-report-link"
+                                                                                    >
+                                                                                        {doc.filename}
+                                                                                    </a>
+                                                                                ))}
+                                                                                {memberDocs.length > 3 && (
+                                                                                    <button 
+                                                                                        className="qa-reports-more-btn"
+                                                                                        onClick={() => setExpandedDocMembers(prev => ({
+                                                                                            ...prev,
+                                                                                            [member.id]: !prev[member.id]
+                                                                                        }))}
+                                                                                    >
+                                                                                        {isExpanded ? '收起' : `+${memberDocs.length - 3} 更多`}
+                                                                                    </button>
+                                                                                )}
+                                                                            </div>
+                                                                        );
+                                                                    } else {
+                                                                        return <span className="qa-no-report">暂无上传</span>;
+                                                                    }
+                                                                })()}
                                                             </div>
                                                         </div>
                                                     );
@@ -2964,10 +3817,11 @@ export default function ReleaseDetailPage({ params }) {
                                 </div>
                             )}
 
-                            {/* 功能验收标签页 */}
-                            {activeTab === 'acceptance' && (
+                            {/* 自查清单标签页 */}
+                            {activeTab === 'checklist' && (
                                 <div className="tab-content">
-                                    <div className="content-form-wrapper">
+                                    {/* 验收信息表单 */}
+                                    <div className="content-form-wrapper" style={{ marginBottom: '24px' }}>
                                         {/* 保存按钮 */}
                                         {canEditPoContent && (
                                             <div className="form-actions-top">
@@ -2981,13 +3835,13 @@ export default function ReleaseDetailPage({ params }) {
                                             </div>
                                         )}
 
-                                        {/* 基本信息 */}
+                                        {/* 验收信息 */}
                                         <div className="form-section">
                                             <div className="section-header">
-                                                <h4 className="section-title">👤 基本信息</h4>
+                                                <h4 className="section-title">👤 验收信息</h4>
                                                 <span className="required-hint">* 为必填项</span>
                                             </div>
-                                            <div className="form-row">
+                                            <div className="form-row three-cols">
                                                 <div className="form-group">
                                                     <label className="form-label label-required">姓名</label>
                                                     <input
@@ -3010,41 +3864,76 @@ export default function ReleaseDetailPage({ params }) {
                                                 </div>
                                                 <div className="form-group">
                                                     <label className="form-label label-required">验收时间</label>
-                                                    <input
-                                                        type="date"
-                                                        className="form-input"
-                                                        disabled={!canEditPoContent}
+                                                    <DatePicker
                                                         value={poForm.poAcceptDate}
-                                                        onChange={e => setPoForm({ ...poForm, poAcceptDate: e.target.value })}
+                                                        onChange={value => setPoForm({ ...poForm, poAcceptDate: value })}
+                                                        placeholder="选择验收日期"
+                                                        disabled={!canEditPoContent}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="form-row">
+                                                <div className="form-group full-width">
+                                                    <label className="form-label">验收意见</label>
+                                                    <textarea
+                                                        className="form-textarea"
+                                                        disabled={!canEditPoContent}
+                                                        value={poForm.poAcceptComment}
+                                                        onChange={e => setPoForm({ ...poForm, poAcceptComment: e.target.value })}
+                                                        placeholder="请输入验收意见（选填）"
+                                                        rows={3}
                                                     />
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* 验收说明 */}
+                                        {/* 附件上传 */}
                                         <div className="form-section">
                                             <div className="section-header">
-                                                <h4 className="section-title">📋 验收要点</h4>
+                                                <h4 className="section-title">📎 附件上传</h4>
                                             </div>
-                                            <div className="acceptance-tips">
-                                                <p>产品验收重点关注以下方面：</p>
-                                                <ul>
-                                                    <li>核对当次发版需求范围是否完整</li>
-                                                    <li>核对核心业务流程是否正常运行</li>
-                                                    <li>确认测试报告中记录的问题是否影响本次发版</li>
-                                                    <li>核对列表、详情页的数字、状态、文案显示</li>
-                                                    <li>检查有无错别字、按钮错位、报错信息是否友好</li>
-                                                    <li>检查移动端相关功能是否正常</li>
-                                                </ul>
-                                            </div>
+                                            <FileUpload
+                                                releaseId={release.id}
+                                                onUploadSuccess={() => {
+                                                    const token = localStorage.getItem('token');
+                                                    fetchReleaseDetail(token);
+                                                }}
+                                                disabled={!canEditPoContent}
+                                                allowedTypes={['ACCEPTANCE_REPORT', 'OTHER']}
+                                            />
+                                            
+                                            {/* 已上传的附件列表 */}
+                                            {(() => {
+                                                const myDocs = (release.documents || []).filter(doc => doc.uploadedById === user?.id);
+                                                if (myDocs.length === 0) return null;
+                                                
+                                                const typeLabels = {
+                                                    ACCEPTANCE_REPORT: '验收报告',
+                                                    OTHER: '其他文档'
+                                                };
+                                                
+                                                return (
+                                                    <div className="uploaded-files-list" style={{ marginTop: '16px' }}>
+                                                        <label className="form-label">已上传的附件</label>
+                                                        <div className="file-list">
+                                                            {myDocs.map(doc => (
+                                                                <div key={doc.id} className="file-item">
+                                                                    <a href={doc.filepath} target="_blank" className="file-link">
+                                                                        📄 {doc.filename}
+                                                                    </a>
+                                                                    <span className="file-meta">
+                                                                        {typeLabels[doc.type] || doc.type} · {new Date(doc.createdAt).toLocaleString('zh-CN')}
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
-                                </div>
-                            )}
 
-                            {/* 自查清单标签页 */}
-                            {activeTab === 'checklist' && (
-                                <div className="tab-content">
+                                    {/* 自查清单 */}
                                     <div className="card">
                                         <div className="card-header">
                                             <h3 className="card-title">✅ 产品人员自查清单</h3>
@@ -3058,6 +3947,7 @@ export default function ReleaseDetailPage({ params }) {
                                                 stage={release.stage}
                                                 userRole={user?.role}
                                                 onSubmit={handleChecklistBatchSubmit}
+                                                onBeforeSubmit={validatePoBeforeSubmit}
                                             />
                                         ) : (
                                             /* 如果没有数据库检查清单，显示静态清单（需要先被添加为成员） */
@@ -3103,12 +3993,6 @@ export default function ReleaseDetailPage({ params }) {
                                             onClick={() => setActiveTab('db-changes')}
                                         >
                                             🗄️ 数据库变更内容
-                                        </button>
-                                        <button 
-                                            className={`tab-btn ${activeTab === 'review' ? 'active' : ''}`}
-                                            onClick={() => setActiveTab('review')}
-                                        >
-                                            📝 审核信息
                                         </button>
                                         <button 
                                             className={`tab-btn ${activeTab === 'checklist' ? 'active' : ''}`}
@@ -3159,6 +4043,9 @@ export default function ReleaseDetailPage({ params }) {
                                             <p>{release.description || '暂无描述'}</p>
                                         </div>
                                     </div>
+                                    
+                                    {/* 实施/验证阶段显示所有填报内容 */}
+                                    {renderImplementationStageContent()}
                                 </div>
                             )}
 
@@ -3239,10 +4126,74 @@ export default function ReleaseDetailPage({ params }) {
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* 审核信息区域 - 直接在数据库变更内容下方 */}
+                                    <div className="card" style={{ marginTop: '24px' }}>
+                                        <div className="card-header">
+                                            <h3 className="card-title">📝 审核信息</h3>
+                                            <span className="card-subtitle">填写审核时间和审核意见</span>
+                                        </div>
+                                        
+                                        <div className="dba-review-form">
+                                            <div className="form-row">
+                                                <div className="form-group">
+                                                    <label className="form-label label-required">审核时间</label>
+                                                    <DatePicker
+                                                        value={dbaForm.dbaReviewDate}
+                                                        onChange={value => setDbaForm({ ...dbaForm, dbaReviewDate: value })}
+                                                        placeholder="选择审核日期"
+                                                        disabled={!canEditDbaContent}
+                                                    />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label className="form-label">审核人姓名</label>
+                                                    <input
+                                                        className="form-input"
+                                                        disabled={!canEditDbaContent}
+                                                        value={dbaForm.dbaName}
+                                                        onChange={e => setDbaForm({ ...dbaForm, dbaName: e.target.value })}
+                                                        placeholder="请输入姓名"
+                                                    />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label className="form-label">联系电话</label>
+                                                    <input
+                                                        className="form-input"
+                                                        disabled={!canEditDbaContent}
+                                                        value={dbaForm.dbaPhone}
+                                                        onChange={e => setDbaForm({ ...dbaForm, dbaPhone: e.target.value })}
+                                                        placeholder="请输入手机号"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">审核意见</label>
+                                                <textarea
+                                                    className="form-textarea"
+                                                    disabled={!canEditDbaContent}
+                                                    value={dbaForm.dbaReviewComment || ''}
+                                                    onChange={e => setDbaForm({ ...dbaForm, dbaReviewComment: e.target.value })}
+                                                    placeholder="请输入审核意见（可选）"
+                                                    rows={3}
+                                                />
+                                            </div>
+                                            {canEditDbaContent && (
+                                                <div className="form-actions">
+                                                    <button
+                                                        className="btn btn-primary"
+                                                        onClick={handleSaveDbaContent}
+                                                        disabled={actionLoading}
+                                                    >
+                                                        💾 {actionLoading ? '保存中...' : '保存审核信息'}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
 
-                            {/* 审核信息标签页 */}
+                            {/* 审核信息标签页 - 已移除，合并到数据库变更内容页面 */}
                             {activeTab === 'review' && (
                                 <div className="tab-content">
                                     <div className="content-form-wrapper">
@@ -3288,12 +4239,11 @@ export default function ReleaseDetailPage({ params }) {
                                                 </div>
                                                 <div className="form-group">
                                                     <label className="form-label label-required">审核时间</label>
-                                                    <input
-                                                        type="date"
-                                                        className="form-input"
-                                                        disabled={!canEditDbaContent}
+                                                    <DatePicker
                                                         value={dbaForm.dbaReviewDate}
-                                                        onChange={e => setDbaForm({ ...dbaForm, dbaReviewDate: e.target.value })}
+                                                        onChange={value => setDbaForm({ ...dbaForm, dbaReviewDate: value })}
+                                                        placeholder="选择审核日期"
+                                                        disabled={!canEditDbaContent}
                                                     />
                                                 </div>
                                             </div>
@@ -3361,11 +4311,10 @@ export default function ReleaseDetailPage({ params }) {
                                                 </div>
                                                 <div className="form-group">
                                                     <label className="form-label">实际执行时间</label>
-                                                    <input
-                                                        type="datetime-local"
-                                                        className="form-input"
+                                                    <DateTimePicker
                                                         value={dbaExecForm.dbaExecTime}
-                                                        onChange={e => setDbaExecForm({ ...dbaExecForm, dbaExecTime: e.target.value })}
+                                                        onChange={value => setDbaExecForm({ ...dbaExecForm, dbaExecTime: value })}
+                                                        placeholder="选择执行时间"
                                                     />
                                                 </div>
                                             </div>
@@ -3443,6 +4392,7 @@ export default function ReleaseDetailPage({ params }) {
                                                 stage={release.stage}
                                                 userRole={user?.role}
                                                 onSubmit={handleChecklistBatchSubmit}
+                                                onBeforeSubmit={validateDbaBeforeSubmit}
                                             />
                                         ) : (
                                             /* 如果没有数据库检查清单，显示静态清单（需要先被添加为成员） */
@@ -3529,6 +4479,9 @@ export default function ReleaseDetailPage({ params }) {
                                             <p>{release.description || '暂无描述'}</p>
                                         </div>
                                     </div>
+                                    
+                                    {/* 实施/验证阶段显示所有填报内容 */}
+                                    {renderImplementationStageContent()}
                                 </div>
                             )}
 
@@ -3578,15 +4531,29 @@ export default function ReleaseDetailPage({ params }) {
                                                 </div>
                                                 <div className="form-group">
                                                     <label className="form-label label-required">备份时间</label>
-                                                    <input
-                                                        type="date"
-                                                        className="form-input"
-                                                        disabled={!canEditOpContent}
+                                                    <DatePicker
                                                         value={opForm.opBackupDate}
-                                                        onChange={e => setOpForm({ ...opForm, opBackupDate: e.target.value })}
+                                                        onChange={value => setOpForm({ ...opForm, opBackupDate: value })}
+                                                        placeholder="选择备份日期"
+                                                        disabled={!canEditOpContent}
                                                     />
                                                 </div>
                                             </div>
+                                        </div>
+
+                                        {/* 备份截图上传 */}
+                                        <div className="form-section">
+                                            <div className="section-header">
+                                                <h4 className="section-title">📸 备份截图</h4>
+                                                <span className="section-subtitle">请上传备份完成的截图作为凭证</span>
+                                            </div>
+                                            <FileUpload
+                                                releaseId={release.id}
+                                                documents={release.documents?.filter(doc => doc.type === 'BACKUP_SCREENSHOT') || []}
+                                                onUploadSuccess={handleUploadSuccess}
+                                                onDeleteDocument={handleDeleteDocument}
+                                                documentType="BACKUP_SCREENSHOT"
+                                            />
                                         </div>
 
                                         {/* 回滚方案 */}
@@ -3606,29 +4573,6 @@ export default function ReleaseDetailPage({ params }) {
                                                     placeholder="请详细描述回滚方案，包括：&#10;1. 回滚触发条件&#10;2. 回滚步骤&#10;3. 回滚后验证方法&#10;4. 预计回滚时间"
                                                 />
                                             </div>
-                                            
-                                            <div className="op-tips">
-                                                <p>运维工作重点：</p>
-                                                <ul>
-                                                    <li>确保数据库、代码、配置文件已完成备份</li>
-                                                    <li>准备好回滚脚本和操作步骤</li>
-                                                    <li>确认回滚方案已与项目经理沟通确认</li>
-                                                    <li>发版期间保持在线，随时准备执行回滚</li>
-                                                </ul>
-                                            </div>
-                                        </div>
-
-                                        {/* 备份截图上传 */}
-                                        <div className="form-section">
-                                            <div className="section-header">
-                                                <h4 className="section-title">📸 备份截图</h4>
-                                                <span className="section-subtitle">请上传备份完成的截图作为凭证</span>
-                                            </div>
-                                            <FileUpload
-                                                releaseId={release.id}
-                                                documents={release.documents?.filter(doc => doc.type === 'BACKUP_SCREENSHOT') || []}
-                                                onUploadSuccess={handleUploadSuccess}
-                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -3649,6 +4593,7 @@ export default function ReleaseDetailPage({ params }) {
                                                 stage={release.stage}
                                                 userRole={user?.role}
                                                 onSubmit={handleChecklistBatchSubmit}
+                                                onBeforeSubmit={validateOpBeforeSubmit}
                                             />
                                         ) : (
                                             <div className="static-checklist">
@@ -3674,2315 +4619,28 @@ export default function ReleaseDetailPage({ params }) {
                         </div>
                     )}
 
-                    {/* 其他角色视图 */}
-                    {!isRD && !isPM && !isQA && !isPO && !isDBA && !isOP && (
-                        <div className="grid grid-2">
-                            <div className="column-stack">
-                                <div className="card">
-                                    <div className="card-header">
-                                        <h3 className="card-title">📋 发版信息</h3>
-                                    </div>
-                                    <div className="info-display">
-                                        <div className="info-row">
-                                            <label>版本号</label>
-                                            <p>{release.version}</p>
-                                        </div>
-                                        <div className="info-row">
-                                            <label>发版描述</label>
-                                            <p>{release.description}</p>
-                                        </div>
-                                        <div className="info-row">
-                                            <label>计划时间</label>
-                                            <p>{release.plannedDate ? new Date(release.plannedDate).toLocaleDateString() : '未设置'}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="column-stack">
-                                <ChecklistPanel
-                                    checklists={myChecklists}
-                                    stage={release.stage}
-                                    userRole={user?.role}
-                                    onSubmit={handleChecklistBatchSubmit}
-                                />
-                            </div>
-                        </div>
-                    )}
+
 
                     <ConfirmModal
                         isOpen={confirmConfig.isOpen}
                         onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
                         {...confirmConfig}
                     />
+
+                    {/* 删除文档确认弹窗 */}
+                    <ConfirmModal
+                        isOpen={deleteDocConfig.isOpen}
+                        onClose={() => setDeleteDocConfig(prev => ({ ...prev, isOpen: false }))}
+                        onConfirm={executeDeleteDocument}
+                        title="确认删除文件"
+                        message={`确定要删除文件「${deleteDocConfig.filename}」吗？此操作不可撤销。`}
+                        confirmText="确定删除"
+                        cancelText="取消"
+                        type="danger"
+                    />
                 </div>
             </main>
 
-            <style jsx>{`
-                .release-detail-page {
-                    padding: 32px 24px;
-                }
-
-                /* 阶段卡片 */
-                .stage-card {
-                    margin-bottom: 24px;
-                }
-                .stage-actions {
-                    display: flex;
-                    justify-content: center;
-                    gap: 16px;
-                    padding-top: 20px;
-                    border-top: 1px solid var(--border-color);
-                    margin-top: 16px;
-                }
-
-                /* 标签页导航 */
-                .tab-nav {
-                    display: flex;
-                    gap: 4px;
-                    background: var(--bg-tertiary);
-                    padding: 4px;
-                    border-radius: var(--radius-lg);
-                    margin-bottom: 24px;
-                }
-                .tab-btn {
-                    flex: 1;
-                    padding: 12px 20px;
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: var(--text-secondary);
-                    background: transparent;
-                    border: none;
-                    border-radius: var(--radius-md);
-                    cursor: pointer;
-                    transition: all var(--transition-fast);
-                }
-                .tab-btn:hover {
-                    color: var(--text-primary);
-                    background: var(--bg-secondary);
-                }
-                .tab-btn.active {
-                    color: var(--text-primary);
-                    background: var(--primary);
-                    box-shadow: var(--shadow-md);
-                }
-
-                /* 标签页内容 */
-                .tab-content {
-                    animation: fadeIn 0.3s ease;
-                }
-                @keyframes fadeIn {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-
-                /* 信息网格 */
-                .info-grid {
-                    display: grid;
-                    grid-template-columns: repeat(4, 1fr);
-                    gap: 16px;
-                    margin-bottom: 20px;
-                }
-                .info-item {
-                    padding: 16px;
-                    background: var(--bg-tertiary);
-                    border-radius: var(--radius-md);
-                }
-                .info-item label {
-                    display: block;
-                    font-size: 12px;
-                    color: var(--text-muted);
-                    margin-bottom: 6px;
-                }
-                .info-item span {
-                    font-size: 15px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                }
-                .info-desc {
-                    padding: 16px;
-                    background: var(--bg-tertiary);
-                    border-radius: var(--radius-md);
-                }
-                .info-desc label {
-                    display: block;
-                    font-size: 12px;
-                    color: var(--text-muted);
-                    margin-bottom: 8px;
-                }
-                .info-desc p {
-                    font-size: 14px;
-                    line-height: 1.6;
-                }
-
-                /* 表单区块 */
-                .content-form-wrapper {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 24px;
-                }
-                .form-actions-top {
-                    display: flex;
-                    justify-content: flex-end;
-                    padding: 16px 20px;
-                    background: var(--bg-card);
-                    border-radius: var(--radius-lg);
-                    border: 1px solid var(--border-light);
-                    position: sticky;
-                    top: 80px;
-                    z-index: 10;
-                }
-                .form-section {
-                    background: var(--bg-card);
-                    border: 1px solid var(--border-light);
-                    border-radius: var(--radius-lg);
-                    padding: 24px;
-                }
-                .section-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 20px;
-                    padding-bottom: 16px;
-                    border-bottom: 1px solid var(--border-color);
-                }
-                .section-title {
-                    font-size: 16px;
-                    font-weight: 700;
-                    color: var(--text-primary);
-                    margin: 0;
-                }
-                .required-hint {
-                    font-size: 12px;
-                    color: var(--text-muted);
-                }
-                .section-hint {
-                    font-size: 13px;
-                    color: var(--text-muted);
-                    margin-bottom: 16px;
-                }
-
-                /* 表单行 */
-                .form-row {
-                    display: grid;
-                    grid-template-columns: repeat(3, 1fr);
-                    gap: 16px;
-                }
-                .form-row-4 {
-                    grid-template-columns: repeat(4, 1fr);
-                }
-                @media (max-width: 1024px) {
-                    .form-row, .form-row-4 {
-                        grid-template-columns: repeat(2, 1fr);
-                    }
-                    .info-grid {
-                        grid-template-columns: repeat(2, 1fr);
-                    }
-                }
-                @media (max-width: 640px) {
-                    .form-row, .form-row-4 {
-                        grid-template-columns: 1fr;
-                    }
-                    .info-grid {
-                        grid-template-columns: 1fr;
-                    }
-                }
-
-                /* 开关组件 */
-                .toggle-group {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                }
-                .toggle-label {
-                    font-size: 13px;
-                    color: var(--text-secondary);
-                }
-                .toggle-switch {
-                    position: relative;
-                    width: 44px;
-                    height: 24px;
-                }
-                .toggle-switch input {
-                    opacity: 0;
-                    width: 0;
-                    height: 0;
-                }
-                .toggle-slider {
-                    position: absolute;
-                    cursor: pointer;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background-color: var(--bg-tertiary);
-                    border: 1px solid var(--border-color);
-                    border-radius: 24px;
-                    transition: 0.3s;
-                }
-                .toggle-slider:before {
-                    position: absolute;
-                    content: "";
-                    height: 18px;
-                    width: 18px;
-                    left: 2px;
-                    bottom: 2px;
-                    background-color: var(--text-muted);
-                    border-radius: 50%;
-                    transition: 0.3s;
-                }
-                .toggle-switch input:checked + .toggle-slider {
-                    background-color: var(--primary);
-                    border-color: var(--primary);
-                }
-                .toggle-switch input:checked + .toggle-slider:before {
-                    transform: translateX(20px);
-                    background-color: white;
-                }
-                .toggle-status {
-                    font-size: 13px;
-                    font-weight: 600;
-                    padding: 2px 8px;
-                    border-radius: 4px;
-                }
-                .toggle-status.yes {
-                    color: var(--success);
-                    background: rgba(16, 185, 129, 0.15);
-                }
-                .toggle-status.no {
-                    color: var(--text-muted);
-                    background: var(--bg-tertiary);
-                }
-
-                /* 变更卡片 */
-                .change-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 16px;
-                }
-                .change-card {
-                    padding: 20px;
-                    background: var(--bg-secondary);
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--radius-md);
-                }
-                .change-card-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 16px;
-                }
-                .change-index {
-                    font-size: 13px;
-                    font-weight: 600;
-                    color: var(--primary-light);
-                    padding: 4px 10px;
-                    background: rgba(99, 102, 241, 0.15);
-                    border-radius: var(--radius-sm);
-                }
-                .btn-icon-danger {
-                    background: none;
-                    border: none;
-                    font-size: 16px;
-                    cursor: pointer;
-                    padding: 4px 8px;
-                    border-radius: var(--radius-sm);
-                    transition: all var(--transition-fast);
-                }
-                .btn-icon-danger:hover {
-                    background: rgba(239, 68, 68, 0.15);
-                }
-
-                /* 代码文本框 */
-                .code-textarea {
-                    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-                    font-size: 13px;
-                    background: var(--bg-primary);
-                }
-
-                /* 复选框组 */
-                .checkbox-group {
-                    display: flex;
-                    align-items: flex-end;
-                    padding-bottom: 12px;
-                }
-                .checkbox-label {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    cursor: pointer;
-                }
-                .checkbox-label input[type="checkbox"] {
-                    width: 18px;
-                    height: 18px;
-                    accent-color: var(--primary);
-                }
-                .checkbox-text {
-                    font-size: 13px;
-                    color: var(--text-secondary);
-                }
-
-                /* 虚线按钮 */
-                .btn-dashed {
-                    width: 100%;
-                    padding: 14px;
-                    background: transparent;
-                    border: 2px dashed var(--border-color);
-                    border-radius: var(--radius-md);
-                    color: var(--text-secondary);
-                    font-size: 14px;
-                    font-weight: 500;
-                    cursor: pointer;
-                    transition: all var(--transition-fast);
-                }
-                .btn-dashed:hover {
-                    border-color: var(--primary);
-                    color: var(--primary);
-                    background: rgba(99, 102, 241, 0.05);
-                }
-
-                /* 空状态提示 */
-                .empty-hint {
-                    text-align: center;
-                    padding: 32px 20px;
-                    color: var(--text-muted);
-                }
-                .empty-hint span {
-                    font-size: 32px;
-                    display: block;
-                    margin-bottom: 8px;
-                    opacity: 0.5;
-                }
-                .empty-hint p {
-                    font-size: 14px;
-                    margin: 0;
-                }
-                .empty-hint.small {
-                    padding: 20px;
-                }
-                .empty-hint.small span {
-                    font-size: 24px;
-                }
-
-                /* 文件列表 */
-                .file-list-grid {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 10px;
-                }
-                .file-item-card {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    padding: 10px 14px;
-                    background: var(--bg-tertiary);
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--radius-md);
-                    text-decoration: none;
-                    color: var(--text-primary);
-                    font-size: 13px;
-                    transition: all var(--transition-fast);
-                }
-                .file-item-card:hover {
-                    border-color: var(--primary);
-                    background: rgba(99, 102, 241, 0.1);
-                }
-                .file-icon {
-                    font-size: 16px;
-                }
-                .file-name {
-                    max-width: 200px;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                }
-
-                /* 列布局 */
-                .column-stack {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 24px;
-                }
-
-                /* 成员网格 */
-                .member-grid {
-                    display: grid;
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 12px;
-                }
-                .member-card {
-                    padding: 14px;
-                    background: var(--bg-tertiary);
-                    border-radius: var(--radius-md);
-                    border: 1px solid var(--border-color);
-                }
-                .member-info {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 10px;
-                }
-                .member-name {
-                    font-weight: 600;
-                    font-size: 13px;
-                }
-                .member-progress {
-                    font-size: 12px;
-                    color: var(--primary);
-                }
-                .member-progress.complete {
-                    color: var(--success);
-                }
-                .progress-bar {
-                    height: 4px;
-                    background: var(--border-color);
-                    border-radius: 100px;
-                    overflow: hidden;
-                }
-                .progress-fill {
-                    height: 100%;
-                    background: var(--primary);
-                    border-radius: 100px;
-                    transition: width 0.3s ease;
-                }
-
-                /* 信息展示 */
-                .info-display {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 16px;
-                }
-                .info-row label {
-                    display: block;
-                    font-size: 12px;
-                    color: var(--text-muted);
-                    margin-bottom: 4px;
-                }
-                .info-row p {
-                    font-size: 14px;
-                    margin: 0;
-                }
-
-                /* 编辑表单 */
-                .edit-form {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 16px;
-                }
-                .btn-group {
-                    display: flex;
-                    gap: 8px;
-                }
-                .btn-sm {
-                    padding: 6px 12px;
-                    font-size: 12px;
-                }
-
-                /* 成员变更列表 */
-                .member-changes-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 12px;
-                }
-                .member-change-card {
-                    padding: 14px;
-                    background: var(--bg-tertiary);
-                    border-radius: var(--radius-md);
-                    border: 1px solid var(--border-color);
-                }
-                .member-change-name {
-                    font-weight: 600;
-                    font-size: 14px;
-                    margin-bottom: 10px;
-                    color: var(--primary-light);
-                }
-                .member-change-info {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 6px;
-                    font-size: 13px;
-                    color: var(--text-secondary);
-                }
-                .member-change-info b {
-                    color: var(--text-muted);
-                    font-weight: 500;
-                }
-
-                /* 表单内部区块 */
-                .form-section-inner {
-                    padding: 16px;
-                    background: var(--bg-secondary);
-                    border-radius: var(--radius-md);
-                    border: 1px solid var(--border-color);
-                }
-
-                /* 卡片副标题 */
-                .card-subtitle {
-                    font-size: 13px;
-                    color: var(--text-muted);
-                    margin-top: 4px;
-                }
-
-                /* 必填标记 */
-                .label-required::after {
-                    content: " *";
-                    color: var(--error);
-                }
-
-                /* ==================== QA 视图样式 ==================== */
-                
-                .qa-workspace {
-                    width: 100%;
-                }
-
-                /* 开发变更内容网格 */
-                .dev-changes-grid {
-                    display: grid;
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 16px;
-                }
-                @media (max-width: 1024px) {
-                    .dev-changes-grid {
-                        grid-template-columns: 1fr;
-                    }
-                }
-
-                /* 开发变更卡片 */
-                .dev-change-card {
-                    background: var(--bg-secondary);
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--radius-lg);
-                    padding: 20px;
-                    transition: all var(--transition-fast);
-                }
-                .dev-change-card:hover {
-                    border-color: var(--primary);
-                    box-shadow: var(--shadow-md);
-                }
-
-                .dev-change-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    margin-bottom: 16px;
-                    padding-bottom: 12px;
-                    border-bottom: 1px solid var(--border-color);
-                }
-
-                .dev-avatar {
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 16px;
-                    font-weight: 700;
-                    color: white;
-                    flex-shrink: 0;
-                }
-
-                .dev-info {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 2px;
-                }
-
-                .dev-name {
-                    font-size: 15px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                }
-
-                .dev-phone {
-                    font-size: 12px;
-                    color: var(--text-muted);
-                }
-
-                .dev-system-badge {
-                    font-size: 11px;
-                    font-weight: 600;
-                    padding: 4px 10px;
-                    background: rgba(59, 130, 246, 0.15);
-                    color: var(--info);
-                    border-radius: 100px;
-                }
-
-                .dev-change-content {
-                    margin-bottom: 16px;
-                }
-                .dev-change-content label {
-                    display: block;
-                    font-size: 12px;
-                    color: var(--text-muted);
-                    margin-bottom: 6px;
-                }
-                .dev-change-content p {
-                    font-size: 14px;
-                    line-height: 1.6;
-                    color: var(--text-secondary);
-                    margin: 0;
-                    display: -webkit-box;
-                    -webkit-line-clamp: 3;
-                    -webkit-box-orient: vertical;
-                    overflow: hidden;
-                }
-
-                .dev-change-stats {
-                    display: flex;
-                    gap: 16px;
-                    padding-top: 12px;
-                    border-top: 1px solid var(--border-color);
-                }
-
-                .stat-item {
-                    display: flex;
-                    align-items: center;
-                    gap: 6px;
-                    font-size: 13px;
-                }
-
-                .stat-icon {
-                    font-size: 14px;
-                }
-
-                .stat-label {
-                    color: var(--text-muted);
-                }
-
-                .stat-value {
-                    font-weight: 600;
-                    color: var(--text-secondary);
-                }
-                .stat-value.has-change {
-                    color: var(--warning);
-                }
-
-                /* 上传区域 */
-                .upload-area {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    padding: 20px;
-                    background: var(--bg-secondary);
-                    border: 2px dashed var(--border-color);
-                    border-radius: var(--radius-md);
-                    margin-bottom: 20px;
-                }
-
-                .upload-hint {
-                    flex: 1;
-                }
-                .upload-hint p {
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                    margin: 0 0 8px 0;
-                }
-                .upload-hint ul {
-                    margin: 0;
-                    padding-left: 20px;
-                    font-size: 13px;
-                    color: var(--text-secondary);
-                }
-                .upload-hint li {
-                    margin-bottom: 4px;
-                }
-
-                .upload-btn-wrapper {
-                    flex-shrink: 0;
-                }
-
-                .uploaded-files {
-                    margin-top: 16px;
-                }
-                .uploaded-files h5 {
-                    font-size: 13px;
-                    font-weight: 600;
-                    color: var(--text-secondary);
-                    margin: 0 0 12px 0;
-                }
-
-                /* 静态清单样式（未加入成员时显示） */
-                .static-checklist {
-                    margin-top: 16px;
-                }
-                .checklist-notice {
-                    display: flex;
-                    align-items: flex-start;
-                    gap: 12px;
-                    padding: 16px;
-                    background: rgba(245, 158, 11, 0.1);
-                    border: 1px solid rgba(245, 158, 11, 0.3);
-                    border-radius: var(--radius-md);
-                    margin-bottom: 20px;
-                }
-                .notice-icon {
-                    font-size: 20px;
-                    flex-shrink: 0;
-                }
-                .checklist-notice p {
-                    margin: 0;
-                    font-size: 13px;
-                    color: var(--warning);
-                    line-height: 1.5;
-                }
-                .checklist-item.disabled {
-                    opacity: 0.6;
-                    cursor: not-allowed;
-                }
-                .checklist-item.disabled .checklist-checkbox {
-                    background: var(--bg-tertiary);
-                }
-
-                /* ==================== PO 视图样式 ==================== */
-                
-                .po-workspace {
-                    width: 100%;
-                }
-
-                /* QA 状态列表 */
-                .qa-status-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 16px;
-                }
-
-                .qa-status-card {
-                    background: var(--bg-secondary);
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--radius-lg);
-                    padding: 20px;
-                    transition: all var(--transition-fast);
-                }
-                .qa-status-card:hover {
-                    border-color: var(--primary);
-                }
-
-                .qa-status-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    margin-bottom: 16px;
-                }
-
-                .qa-avatar {
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 16px;
-                    font-weight: 700;
-                    color: white;
-                    flex-shrink: 0;
-                }
-
-                .qa-info {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 2px;
-                }
-
-                .qa-name {
-                    font-size: 15px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                }
-
-                .qa-phone {
-                    font-size: 12px;
-                    color: var(--text-muted);
-                }
-
-                .qa-progress-badge {
-                    font-size: 12px;
-                    font-weight: 600;
-                    padding: 6px 12px;
-                    background: rgba(245, 158, 11, 0.15);
-                    color: var(--warning);
-                    border-radius: 100px;
-                }
-                .qa-progress-badge.complete {
-                    background: rgba(16, 185, 129, 0.15);
-                    color: var(--success);
-                }
-
-                .qa-status-info {
-                    display: grid;
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 12px;
-                    margin-bottom: 12px;
-                }
-
-                .qa-info-row {
-                    display: flex;
-                    justify-content: space-between;
-                    padding: 8px 12px;
-                    background: var(--bg-tertiary);
-                    border-radius: var(--radius-sm);
-                }
-
-                .qa-info-label {
-                    font-size: 12px;
-                    color: var(--text-muted);
-                }
-
-                .qa-info-value {
-                    font-size: 13px;
-                    font-weight: 500;
-                    color: var(--text-primary);
-                }
-
-                .qa-progress-bar {
-                    height: 6px;
-                    background: var(--border-color);
-                    border-radius: 100px;
-                    overflow: hidden;
-                    margin-bottom: 12px;
-                }
-
-                .qa-progress-fill {
-                    height: 100%;
-                    background: linear-gradient(90deg, var(--success) 0%, #059669 100%);
-                    border-radius: 100px;
-                    transition: width 0.3s ease;
-                }
-
-                .qa-reports {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    flex-wrap: wrap;
-                    padding-top: 12px;
-                    border-top: 1px solid var(--border-color);
-                }
-
-                .qa-reports-label {
-                    font-size: 13px;
-                    color: var(--text-muted);
-                }
-
-                .qa-reports-list {
-                    display: flex;
-                    gap: 8px;
-                    flex-wrap: wrap;
-                }
-
-                .qa-report-link {
-                    font-size: 12px;
-                    padding: 4px 10px;
-                    background: rgba(59, 130, 246, 0.15);
-                    color: var(--info);
-                    border-radius: var(--radius-sm);
-                    text-decoration: none;
-                    transition: all var(--transition-fast);
-                    max-width: 150px;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                }
-                .qa-report-link:hover {
-                    background: rgba(59, 130, 246, 0.25);
-                }
-
-                .qa-reports-more {
-                    font-size: 12px;
-                    color: var(--text-muted);
-                }
-
-                .qa-no-report {
-                    font-size: 12px;
-                    color: var(--text-muted);
-                    font-style: italic;
-                }
-
-                /* 验收提示 */
-                .acceptance-tips {
-                    padding: 16px;
-                    background: var(--bg-secondary);
-                    border-radius: var(--radius-md);
-                    border-left: 4px solid var(--primary);
-                }
-                .acceptance-tips p {
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                    margin: 0 0 12px 0;
-                }
-                .acceptance-tips ul {
-                    margin: 0;
-                    padding-left: 20px;
-                    font-size: 13px;
-                    color: var(--text-secondary);
-                    line-height: 1.8;
-                }
-                .acceptance-tips li {
-                    margin-bottom: 4px;
-                }
-
-                /* ==================== DBA 视图样式 ==================== */
-                
-                .dba-workspace {
-                    width: 100%;
-                }
-
-                /* 数据库变更列表 */
-                .db-changes-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 24px;
-                }
-
-                .db-member-section {
-                    background: var(--bg-secondary);
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--radius-lg);
-                    overflow: hidden;
-                }
-
-                .db-member-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    padding: 16px 20px;
-                    background: var(--bg-tertiary);
-                    border-bottom: 1px solid var(--border-color);
-                }
-
-                .db-member-avatar {
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 16px;
-                    font-weight: 700;
-                    color: white;
-                    flex-shrink: 0;
-                }
-
-                .db-member-info {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 2px;
-                }
-
-                .db-member-name {
-                    font-size: 15px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                }
-
-                .db-member-phone {
-                    font-size: 12px;
-                    color: var(--text-muted);
-                }
-
-                .db-member-system {
-                    font-size: 11px;
-                    font-weight: 600;
-                    padding: 4px 10px;
-                    background: rgba(59, 130, 246, 0.15);
-                    color: var(--info);
-                    border-radius: 100px;
-                }
-
-                .db-change-count {
-                    font-size: 12px;
-                    font-weight: 600;
-                    padding: 4px 10px;
-                    background: rgba(245, 158, 11, 0.15);
-                    color: var(--warning);
-                    border-radius: 100px;
-                }
-
-                .db-changes-detail {
-                    padding: 20px;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 16px;
-                }
-
-                .db-change-item {
-                    background: var(--bg-card);
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--radius-md);
-                    padding: 16px;
-                }
-
-                .db-change-item-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    margin-bottom: 16px;
-                    padding-bottom: 12px;
-                    border-bottom: 1px solid var(--border-color);
-                }
-
-                .db-change-index {
-                    font-size: 13px;
-                    font-weight: 600;
-                    color: var(--primary-light);
-                    padding: 4px 10px;
-                    background: rgba(99, 102, 241, 0.15);
-                    border-radius: var(--radius-sm);
-                }
-
-                .db-change-type {
-                    font-size: 12px;
-                    font-weight: 600;
-                    padding: 4px 10px;
-                    background: rgba(16, 185, 129, 0.15);
-                    color: var(--success);
-                    border-radius: var(--radius-sm);
-                }
-
-                .db-affects-online {
-                    font-size: 12px;
-                    font-weight: 600;
-                    padding: 4px 10px;
-                    background: rgba(239, 68, 68, 0.15);
-                    color: var(--error);
-                    border-radius: var(--radius-sm);
-                    margin-left: auto;
-                }
-
-                .db-change-info-grid {
-                    display: grid;
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 12px;
-                    margin-bottom: 16px;
-                }
-                @media (max-width: 768px) {
-                    .db-change-info-grid {
-                        grid-template-columns: 1fr;
-                    }
-                }
-
-                .db-info-row {
-                    padding: 10px 12px;
-                    background: var(--bg-tertiary);
-                    border-radius: var(--radius-sm);
-                }
-                .db-info-row label {
-                    display: block;
-                    font-size: 11px;
-                    color: var(--text-muted);
-                    margin-bottom: 4px;
-                }
-                .db-info-row p {
-                    font-size: 13px;
-                    font-weight: 500;
-                    color: var(--text-primary);
-                    margin: 0;
-                }
-
-                .db-sql-section {
-                    margin-bottom: 16px;
-                }
-                .db-sql-section label {
-                    display: block;
-                    font-size: 12px;
-                    color: var(--text-muted);
-                    margin-bottom: 8px;
-                }
-
-                .db-sql-code {
-                    background: var(--bg-primary);
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--radius-md);
-                    padding: 16px;
-                    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-                    font-size: 13px;
-                    line-height: 1.6;
-                    color: var(--text-primary);
-                    overflow-x: auto;
-                    white-space: pre-wrap;
-                    word-break: break-all;
-                    margin: 0;
-                }
-
-                .db-impact-section label {
-                    display: block;
-                    font-size: 12px;
-                    color: var(--text-muted);
-                    margin-bottom: 6px;
-                }
-                .db-impact-section p {
-                    font-size: 13px;
-                    color: var(--text-secondary);
-                    margin: 0;
-                    padding: 10px 12px;
-                    background: var(--bg-tertiary);
-                    border-radius: var(--radius-sm);
-                }
-
-                /* 审核提示 */
-                .review-tips {
-                    padding: 16px;
-                    background: var(--bg-secondary);
-                    border-radius: var(--radius-md);
-                    border-left: 4px solid var(--warning);
-                }
-                .review-tips p {
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                    margin: 0 0 12px 0;
-                }
-                .review-tips ul {
-                    margin: 0;
-                    padding-left: 20px;
-                    font-size: 13px;
-                    color: var(--text-secondary);
-                    line-height: 1.8;
-                }
-                .review-tips li {
-                    margin-bottom: 4px;
-                }
-
-                /* ==================== PM 视图样式 ==================== */
-                
-                .pm-workspace {
-                    width: 100%;
-                }
-
-                /* PM 成员网格 */
-                .pm-member-grid {
-                    display: grid;
-                    grid-template-columns: repeat(4, 1fr);
-                    gap: 12px;
-                }
-                @media (max-width: 1024px) {
-                    .pm-member-grid {
-                        grid-template-columns: repeat(3, 1fr);
-                    }
-                }
-                @media (max-width: 768px) {
-                    .pm-member-grid {
-                        grid-template-columns: repeat(2, 1fr);
-                    }
-                }
-
-                .pm-member-card {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    padding: 12px;
-                    background: var(--bg-tertiary);
-                    border-radius: var(--radius-md);
-                    border: 1px solid var(--border-color);
-                }
-
-                .pm-member-avatar {
-                    width: 36px;
-                    height: 36px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 14px;
-                    font-weight: 700;
-                    color: white;
-                    flex-shrink: 0;
-                }
-
-                .pm-member-info {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 2px;
-                }
-
-                .pm-member-name {
-                    font-size: 13px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                }
-
-                .pm-member-role {
-                    font-size: 11px;
-                    color: var(--text-muted);
-                }
-
-                /* PM 进度列表 */
-                .pm-progress-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 16px;
-                }
-
-                .pm-progress-card {
-                    background: var(--bg-secondary);
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--radius-lg);
-                    padding: 20px;
-                    transition: all var(--transition-fast);
-                }
-                .pm-progress-card:hover {
-                    border-color: var(--primary);
-                }
-
-                .pm-progress-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    margin-bottom: 16px;
-                }
-
-                .pm-progress-avatar {
-                    width: 44px;
-                    height: 44px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 18px;
-                    font-weight: 700;
-                    color: white;
-                    flex-shrink: 0;
-                }
-
-                .pm-progress-info {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 2px;
-                }
-
-                .pm-progress-name {
-                    font-size: 15px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                }
-
-                .pm-progress-role {
-                    font-size: 12px;
-                    color: var(--text-muted);
-                }
-
-                .pm-progress-badge {
-                    font-size: 12px;
-                    font-weight: 600;
-                    padding: 6px 12px;
-                    border-radius: 100px;
-                }
-                .pm-progress-badge.complete {
-                    background: rgba(16, 185, 129, 0.15);
-                    color: var(--success);
-                }
-                .pm-progress-badge.in-progress {
-                    background: rgba(245, 158, 11, 0.15);
-                    color: var(--warning);
-                }
-                .pm-progress-badge.pending {
-                    background: var(--bg-tertiary);
-                    color: var(--text-muted);
-                }
-
-                .pm-progress-stats {
-                    display: flex;
-                    gap: 24px;
-                    margin-bottom: 12px;
-                }
-
-                .pm-stat-item {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 4px;
-                }
-
-                .pm-stat-label {
-                    font-size: 11px;
-                    color: var(--text-muted);
-                }
-
-                .pm-stat-value {
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                }
-                .pm-stat-value.done {
-                    color: var(--success);
-                }
-                .pm-stat-value.pending {
-                    color: var(--text-muted);
-                }
-
-                .pm-progress-bar {
-                    height: 6px;
-                    background: var(--border-color);
-                    border-radius: 100px;
-                    overflow: hidden;
-                }
-
-                .pm-progress-fill {
-                    height: 100%;
-                    background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
-                    border-radius: 100px;
-                    transition: width 0.3s ease;
-                }
-
-                /* PM 开发列表 */
-                .pm-dev-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 20px;
-                }
-
-                .pm-dev-section {
-                    background: var(--bg-secondary);
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--radius-lg);
-                    overflow: hidden;
-                }
-
-                .pm-dev-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    padding: 16px 20px;
-                    background: var(--bg-tertiary);
-                    border-bottom: 1px solid var(--border-color);
-                }
-
-                .pm-dev-avatar {
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 16px;
-                    font-weight: 700;
-                    color: white;
-                    flex-shrink: 0;
-                }
-
-                .pm-dev-info {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 2px;
-                }
-
-                .pm-dev-name {
-                    font-size: 15px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                }
-
-                .pm-dev-phone {
-                    font-size: 12px;
-                    color: var(--text-muted);
-                }
-
-                .pm-dev-system {
-                    font-size: 11px;
-                    font-weight: 600;
-                    padding: 4px 10px;
-                    background: rgba(59, 130, 246, 0.15);
-                    color: var(--info);
-                    border-radius: 100px;
-                }
-
-                .pm-dev-content {
-                    padding: 16px 20px;
-                    border-bottom: 1px solid var(--border-color);
-                }
-                .pm-dev-content label {
-                    display: block;
-                    font-size: 12px;
-                    color: var(--text-muted);
-                    margin-bottom: 6px;
-                }
-                .pm-dev-content p {
-                    font-size: 14px;
-                    line-height: 1.6;
-                    color: var(--text-secondary);
-                    margin: 0;
-                }
-
-                .pm-dev-db-changes,
-                .pm-dev-config-changes {
-                    padding: 16px 20px;
-                    border-bottom: 1px solid var(--border-color);
-                }
-                .pm-dev-db-changes h5,
-                .pm-dev-config-changes h5 {
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                    margin: 0 0 12px 0;
-                }
-
-                .pm-db-item,
-                .pm-config-item {
-                    background: var(--bg-card);
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--radius-md);
-                    padding: 14px;
-                    margin-bottom: 10px;
-                }
-                .pm-db-item:last-child,
-                .pm-config-item:last-child {
-                    margin-bottom: 0;
-                }
-
-                .pm-db-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    margin-bottom: 10px;
-                }
-
-                .pm-db-index {
-                    font-size: 12px;
-                    font-weight: 600;
-                    color: var(--primary);
-                }
-
-                .pm-db-type {
-                    font-size: 11px;
-                    font-weight: 600;
-                    padding: 2px 8px;
-                    background: rgba(16, 185, 129, 0.15);
-                    color: var(--success);
-                    border-radius: var(--radius-sm);
-                }
-
-                .pm-db-warning,
-                .pm-config-warning {
-                    font-size: 11px;
-                    font-weight: 600;
-                    padding: 2px 8px;
-                    background: rgba(239, 68, 68, 0.15);
-                    color: var(--error);
-                    border-radius: var(--radius-sm);
-                    margin-left: auto;
-                }
-
-                .pm-db-details {
-                    display: grid;
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 8px;
-                    font-size: 13px;
-                    color: var(--text-secondary);
-                    margin-bottom: 10px;
-                }
-                .pm-db-details b {
-                    color: var(--text-muted);
-                    font-weight: 500;
-                }
-
-                .pm-db-sql {
-                    margin-top: 10px;
-                }
-                .pm-db-sql label {
-                    display: block;
-                    font-size: 11px;
-                    color: var(--text-muted);
-                    margin-bottom: 6px;
-                }
-                .pm-db-sql pre {
-                    background: var(--bg-primary);
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--radius-sm);
-                    padding: 10px;
-                    font-family: 'Monaco', 'Menlo', monospace;
-                    font-size: 12px;
-                    color: var(--text-primary);
-                    overflow-x: auto;
-                    white-space: pre-wrap;
-                    margin: 0;
-                }
-
-                .pm-config-item {
-                    font-size: 13px;
-                    color: var(--text-secondary);
-                }
-                .pm-config-item b {
-                    color: var(--text-muted);
-                    font-weight: 500;
-                }
-
-                .pm-dev-empty {
-                    padding: 24px 20px;
-                    text-align: center;
-                    color: var(--text-muted);
-                }
-                .pm-dev-empty span {
-                    font-size: 24px;
-                    display: block;
-                    margin-bottom: 8px;
-                    opacity: 0.5;
-                }
-                .pm-dev-empty p {
-                    font-size: 13px;
-                    margin: 0;
-                }
-
-                /* PM QA 列表 */
-                .pm-qa-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 16px;
-                }
-
-                .pm-qa-card {
-                    background: var(--bg-secondary);
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--radius-lg);
-                    padding: 20px;
-                }
-
-                .pm-qa-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    margin-bottom: 16px;
-                }
-
-                .pm-qa-avatar {
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 16px;
-                    font-weight: 700;
-                    color: white;
-                    flex-shrink: 0;
-                }
-
-                .pm-qa-info {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 2px;
-                }
-
-                .pm-qa-name {
-                    font-size: 15px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                }
-
-                .pm-qa-phone {
-                    font-size: 12px;
-                    color: var(--text-muted);
-                }
-
-                .pm-qa-badge {
-                    font-size: 12px;
-                    font-weight: 600;
-                    padding: 6px 12px;
-                    background: rgba(245, 158, 11, 0.15);
-                    color: var(--warning);
-                    border-radius: 100px;
-                }
-                .pm-qa-badge.complete {
-                    background: rgba(16, 185, 129, 0.15);
-                    color: var(--success);
-                }
-
-                .pm-qa-stats {
-                    display: grid;
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 12px;
-                    margin-bottom: 12px;
-                }
-
-                .pm-qa-stat {
-                    display: flex;
-                    justify-content: space-between;
-                    padding: 8px 12px;
-                    background: var(--bg-tertiary);
-                    border-radius: var(--radius-sm);
-                }
-
-                .pm-qa-stat-label {
-                    font-size: 12px;
-                    color: var(--text-muted);
-                }
-
-                .pm-qa-stat-value {
-                    font-size: 13px;
-                    font-weight: 500;
-                    color: var(--text-primary);
-                }
-
-                .pm-qa-progress-bar {
-                    height: 6px;
-                    background: var(--border-color);
-                    border-radius: 100px;
-                    overflow: hidden;
-                    margin-bottom: 12px;
-                }
-
-                .pm-qa-progress-fill {
-                    height: 100%;
-                    background: linear-gradient(90deg, var(--success) 0%, #059669 100%);
-                    border-radius: 100px;
-                    transition: width 0.3s ease;
-                }
-
-                .pm-qa-reports {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    flex-wrap: wrap;
-                    padding-top: 12px;
-                    border-top: 1px solid var(--border-color);
-                }
-
-                .pm-qa-reports-label {
-                    font-size: 13px;
-                    color: var(--text-muted);
-                }
-
-                .pm-qa-reports-list {
-                    display: flex;
-                    gap: 8px;
-                    flex-wrap: wrap;
-                }
-
-                .pm-qa-report-link {
-                    font-size: 12px;
-                    padding: 4px 10px;
-                    background: rgba(59, 130, 246, 0.15);
-                    color: var(--info);
-                    border-radius: var(--radius-sm);
-                    text-decoration: none;
-                    transition: all var(--transition-fast);
-                }
-                .pm-qa-report-link:hover {
-                    background: rgba(59, 130, 246, 0.25);
-                }
-
-                .pm-qa-no-report {
-                    font-size: 12px;
-                    color: var(--text-muted);
-                    font-style: italic;
-                }
-
-                /* PM DBA 列表 */
-                .pm-dba-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 16px;
-                    margin-bottom: 24px;
-                }
-
-                .pm-dba-card {
-                    background: var(--bg-secondary);
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--radius-lg);
-                    padding: 20px;
-                }
-
-                .pm-dba-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    margin-bottom: 16px;
-                }
-
-                .pm-dba-avatar {
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 16px;
-                    font-weight: 700;
-                    color: white;
-                    flex-shrink: 0;
-                }
-
-                .pm-dba-info {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 2px;
-                }
-
-                .pm-dba-name {
-                    font-size: 15px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                }
-
-                .pm-dba-phone {
-                    font-size: 12px;
-                    color: var(--text-muted);
-                }
-
-                .pm-dba-badge {
-                    font-size: 12px;
-                    font-weight: 600;
-                    padding: 6px 12px;
-                    background: rgba(245, 158, 11, 0.15);
-                    color: var(--warning);
-                    border-radius: 100px;
-                }
-                .pm-dba-badge.complete {
-                    background: rgba(16, 185, 129, 0.15);
-                    color: var(--success);
-                }
-
-                .pm-dba-stats {
-                    display: grid;
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 12px;
-                    margin-bottom: 12px;
-                }
-
-                .pm-dba-stat {
-                    display: flex;
-                    justify-content: space-between;
-                    padding: 8px 12px;
-                    background: var(--bg-tertiary);
-                    border-radius: var(--radius-sm);
-                }
-
-                .pm-dba-stat-label {
-                    font-size: 12px;
-                    color: var(--text-muted);
-                }
-
-                .pm-dba-stat-value {
-                    font-size: 13px;
-                    font-weight: 500;
-                    color: var(--text-primary);
-                }
-
-                .pm-dba-progress-bar {
-                    height: 6px;
-                    background: var(--border-color);
-                    border-radius: 100px;
-                    overflow: hidden;
-                }
-
-                .pm-dba-progress-fill {
-                    height: 100%;
-                    background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
-                    border-radius: 100px;
-                    transition: width 0.3s ease;
-                }
-
-                /* PM 数据库变更汇总 */
-                .pm-db-summary {
-                    padding: 20px;
-                    background: var(--bg-tertiary);
-                    border-radius: var(--radius-lg);
-                    border: 1px solid var(--border-color);
-                }
-                .pm-db-summary h4 {
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                    margin: 0 0 16px 0;
-                }
-
-                .pm-db-summary-empty {
-                    font-size: 13px;
-                    color: var(--text-muted);
-                    margin: 0;
-                }
-
-                .pm-db-summary-stats {
-                    display: flex;
-                    gap: 24px;
-                }
-
-                .pm-db-summary-item {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    padding: 16px 24px;
-                    background: var(--bg-card);
-                    border-radius: var(--radius-md);
-                    border: 1px solid var(--border-color);
-                }
-                .pm-db-summary-item.warning {
-                    border-color: rgba(239, 68, 68, 0.3);
-                    background: rgba(239, 68, 68, 0.05);
-                }
-
-                .pm-db-summary-num {
-                    font-size: 28px;
-                    font-weight: 700;
-                    color: var(--text-primary);
-                }
-                .pm-db-summary-item.warning .pm-db-summary-num {
-                    color: var(--error);
-                }
-
-                .pm-db-summary-label {
-                    font-size: 12px;
-                    color: var(--text-muted);
-                    margin-top: 4px;
-                }
-
-                /* PM 检查清单提示样式 */
-                .pm-checklist-info {
-                    padding: 20px;
-                }
-                .pm-checklist-hint {
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                    margin: 0 0 16px 0;
-                }
-                .pm-checklist-items {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 12px;
-                    margin-bottom: 20px;
-                }
-                .pm-checklist-item {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    padding: 12px 16px;
-                    background: var(--bg-tertiary);
-                    border-radius: var(--radius-md);
-                    border: 1px solid var(--border-color);
-                }
-                .pm-checklist-icon {
-                    font-size: 16px;
-                    color: var(--text-muted);
-                }
-                .pm-checklist-label {
-                    font-size: 14px;
-                    color: var(--text-secondary);
-                }
-                .pm-checklist-note {
-                    font-size: 13px;
-                    color: var(--warning);
-                    margin: 0;
-                    padding: 12px 16px;
-                    background: rgba(245, 158, 11, 0.1);
-                    border-radius: var(--radius-md);
-                    border: 1px solid rgba(245, 158, 11, 0.2);
-                }
-
-                /* PM 运维列表 */
-                .pm-op-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 16px;
-                }
-
-                .pm-op-card {
-                    background: var(--bg-secondary);
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--radius-lg);
-                    padding: 20px;
-                }
-
-                .pm-op-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    margin-bottom: 16px;
-                }
-
-                .pm-op-avatar {
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 16px;
-                    font-weight: 700;
-                    color: white;
-                    flex-shrink: 0;
-                }
-
-                .pm-op-info {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 2px;
-                }
-
-                .pm-op-name {
-                    font-size: 15px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                }
-
-                .pm-op-phone {
-                    font-size: 12px;
-                    color: var(--text-muted);
-                }
-
-                .pm-op-badge {
-                    font-size: 12px;
-                    font-weight: 600;
-                    padding: 6px 12px;
-                    background: rgba(139, 92, 246, 0.15);
-                    color: #8b5cf6;
-                    border-radius: 100px;
-                }
-                .pm-op-badge.complete {
-                    background: rgba(16, 185, 129, 0.15);
-                    color: var(--success);
-                }
-
-                .pm-op-stats {
-                    display: grid;
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 12px;
-                    margin-bottom: 12px;
-                }
-
-                .pm-op-stat {
-                    display: flex;
-                    justify-content: space-between;
-                    padding: 8px 12px;
-                    background: var(--bg-tertiary);
-                    border-radius: var(--radius-sm);
-                }
-
-                .pm-op-stat-label {
-                    font-size: 12px;
-                    color: var(--text-muted);
-                }
-
-                .pm-op-stat-value {
-                    font-size: 13px;
-                    font-weight: 500;
-                    color: var(--text-primary);
-                }
-
-                .pm-op-progress-bar {
-                    height: 6px;
-                    background: var(--border-color);
-                    border-radius: 100px;
-                    overflow: hidden;
-                    margin-bottom: 12px;
-                }
-
-                .pm-op-progress-fill {
-                    height: 100%;
-                    background: linear-gradient(90deg, #8b5cf6 0%, #7c3aed 100%);
-                    border-radius: 100px;
-                    transition: width 0.3s ease;
-                }
-
-                .pm-op-rollback {
-                    padding: 12px;
-                    background: var(--bg-tertiary);
-                    border-radius: var(--radius-md);
-                    margin-bottom: 12px;
-                }
-
-                .pm-op-rollback-label {
-                    font-size: 13px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                    display: block;
-                    margin-bottom: 8px;
-                }
-
-                .pm-op-rollback-content {
-                    font-size: 13px;
-                    color: var(--text-secondary);
-                    line-height: 1.6;
-                    margin: 0;
-                    white-space: pre-wrap;
-                }
-
-                .pm-op-screenshots {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    flex-wrap: wrap;
-                    padding-top: 12px;
-                    border-top: 1px solid var(--border-color);
-                }
-
-                .pm-op-screenshots-label {
-                    font-size: 13px;
-                    color: var(--text-muted);
-                }
-
-                .pm-op-screenshots-list {
-                    display: flex;
-                    gap: 8px;
-                    flex-wrap: wrap;
-                }
-
-                .pm-op-screenshot-link {
-                    font-size: 12px;
-                    padding: 4px 10px;
-                    background: rgba(139, 92, 246, 0.15);
-                    color: #8b5cf6;
-                    border-radius: var(--radius-sm);
-                    text-decoration: none;
-                    transition: all var(--transition-fast);
-                }
-                .pm-op-screenshot-link:hover {
-                    background: rgba(139, 92, 246, 0.25);
-                }
-
-                .pm-op-no-screenshot {
-                    font-size: 12px;
-                    color: var(--text-muted);
-                    font-style: italic;
-                }
-
-                /* ==================== OP 视图样式 ==================== */
-                
-                .op-workspace {
-                    width: 100%;
-                }
-
-                /* 运维提示 */
-                .op-tips {
-                    padding: 16px;
-                    background: var(--bg-secondary);
-                    border-radius: var(--radius-md);
-                    border-left: 4px solid var(--info);
-                    margin-top: 16px;
-                }
-                .op-tips p {
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                    margin: 0 0 12px 0;
-                }
-                .op-tips ul {
-                    margin: 0;
-                    padding-left: 20px;
-                    font-size: 13px;
-                    color: var(--text-secondary);
-                    line-height: 1.8;
-                }
-                .op-tips li {
-                    margin-bottom: 4px;
-                }
-
-                /* ==================== 成员详情弹窗样式 ==================== */
-                .member-detail-modal {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(0, 0, 0, 0.7);
-                    backdrop-filter: blur(4px);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 1000;
-                    padding: 20px;
-                }
-                .member-detail-content {
-                    background: var(--bg-primary);
-                    border-radius: var(--radius-lg);
-                    width: 100%;
-                    max-width: 700px;
-                    max-height: 85vh;
-                    overflow: hidden;
-                    display: flex;
-                    flex-direction: column;
-                }
-                .member-detail-header {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    padding: 20px 24px;
-                    border-bottom: 1px solid var(--border-color);
-                    background: var(--bg-secondary);
-                }
-                .member-detail-title {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                }
-                .member-detail-avatar {
-                    width: 48px;
-                    height: 48px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, var(--primary), var(--primary-light));
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: white;
-                    font-weight: 600;
-                    font-size: 18px;
-                }
-                .member-detail-info h3 {
-                    margin: 0;
-                    font-size: 18px;
-                    color: var(--text-primary);
-                }
-                .member-detail-info span {
-                    font-size: 13px;
-                    color: var(--text-muted);
-                }
-                .member-detail-close {
-                    background: none;
-                    border: none;
-                    color: var(--text-muted);
-                    font-size: 24px;
-                    cursor: pointer;
-                    padding: 4px;
-                    line-height: 1;
-                }
-                .member-detail-close:hover {
-                    color: var(--text-primary);
-                }
-                .member-detail-body {
-                    flex: 1;
-                    overflow-y: auto;
-                    padding: 24px;
-                }
-                .member-detail-section {
-                    margin-bottom: 24px;
-                }
-                .member-detail-section:last-child {
-                    margin-bottom: 0;
-                }
-                .member-detail-section h4 {
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                    margin: 0 0 12px 0;
-                    padding-bottom: 8px;
-                    border-bottom: 1px solid var(--border-color);
-                }
-                .member-checklist-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 8px;
-                }
-                .member-checklist-item {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    padding: 10px 12px;
-                    background: var(--bg-secondary);
-                    border-radius: var(--radius-sm);
-                    font-size: 13px;
-                }
-                .member-checklist-item.checked {
-                    background: rgba(34, 197, 94, 0.1);
-                }
-                .member-checklist-item.unchecked {
-                    background: rgba(239, 68, 68, 0.1);
-                }
-                .member-checklist-icon {
-                    font-size: 16px;
-                }
-                .member-checklist-label {
-                    flex: 1;
-                    color: var(--text-primary);
-                }
-                .member-checklist-status {
-                    font-size: 12px;
-                    padding: 2px 8px;
-                    border-radius: 4px;
-                }
-                .member-checklist-status.done {
-                    background: rgba(34, 197, 94, 0.2);
-                    color: var(--success);
-                }
-                .member-checklist-status.pending {
-                    background: rgba(239, 68, 68, 0.2);
-                    color: var(--danger);
-                }
-                .member-content-grid {
-                    display: grid;
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 12px;
-                }
-                .member-content-item {
-                    padding: 12px;
-                    background: var(--bg-secondary);
-                    border-radius: var(--radius-sm);
-                }
-                .member-content-item.full-width {
-                    grid-column: 1 / -1;
-                }
-                .member-content-item label {
-                    display: block;
-                    font-size: 12px;
-                    color: var(--text-muted);
-                    margin-bottom: 4px;
-                }
-                .member-content-item p {
-                    margin: 0;
-                    font-size: 14px;
-                    color: var(--text-primary);
-                    word-break: break-word;
-                }
-                .member-content-item pre {
-                    margin: 0;
-                    font-size: 12px;
-                    background: var(--bg-tertiary);
-                    padding: 8px;
-                    border-radius: 4px;
-                    overflow-x: auto;
-                    white-space: pre-wrap;
-                    word-break: break-word;
-                }
-                .member-db-change {
-                    padding: 12px;
-                    background: var(--bg-secondary);
-                    border-radius: var(--radius-sm);
-                    margin-bottom: 12px;
-                    border-left: 3px solid var(--primary);
-                }
-                .member-db-change:last-child {
-                    margin-bottom: 0;
-                }
-                .member-db-change-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    margin-bottom: 8px;
-                }
-                .member-db-change-type {
-                    font-size: 12px;
-                    padding: 2px 8px;
-                    background: rgba(52, 120, 246, 0.2);
-                    color: var(--primary-light);
-                    border-radius: 4px;
-                }
-                .member-db-change-warning {
-                    font-size: 11px;
-                    padding: 2px 6px;
-                    background: rgba(239, 68, 68, 0.2);
-                    color: var(--danger);
-                    border-radius: 4px;
-                }
-                .member-no-content {
-                    text-align: center;
-                    padding: 24px;
-                    color: var(--text-muted);
-                    font-size: 14px;
-                }
-            `}</style>
 
             {/* 成员详情弹窗 */}
             {viewingMember && (
@@ -5996,10 +4654,18 @@ export default function ReleaseDetailPage({ params }) {
                                 <div className="member-detail-info">
                                     <h3>{viewingMember.user?.name}</h3>
                                     <span>
-                                        {(viewingMember.user?.role || '').split(',').map(r => {
+                                        {/* 显示成员在该发版中的角色 */}
+                                        {(() => {
                                             const labels = { PM: '项目经理', RD: '开发', QA: '测试', PO: '产品', DBA: 'DBA', OP: '运维' };
-                                            return labels[r] || r;
-                                        }).join(' / ')}
+                                            const roleInRelease = viewingMember.role;
+                                            if (roleInRelease) {
+                                                return `本次发版角色：${labels[roleInRelease] || roleInRelease}`;
+                                            }
+                                            // 兼容旧数据：显示用户的所有角色
+                                            return (viewingMember.user?.role || '').split(',').map(r => {
+                                                return labels[r] || r;
+                                            }).join(' / ');
+                                        })()}
                                     </span>
                                 </div>
                             </div>
@@ -6011,9 +4677,22 @@ export default function ReleaseDetailPage({ params }) {
                             <div className="member-detail-section">
                                 <h4>📋 检查清单完成情况</h4>
                                 {(() => {
-                                    const memberChecklistItems = enrichedChecklists.filter(
-                                        c => c.userId === viewingMember.userId && c.stage === release.stage
-                                    );
+                                    // 获取成员在该发版中的角色
+                                    const memberRoleInRelease = viewingMember.role || '';
+                                    
+                                    // 根据成员在该发版中的角色过滤检查清单
+                                    const memberChecklistItems = enrichedChecklists.filter(c => {
+                                        // 必须是该成员的检查项
+                                        if (c.userId !== viewingMember.userId) return false;
+                                        // 必须是当前阶段的
+                                        if (c.stage !== release.stage) return false;
+                                        // 如果有指定角色，只显示该角色对应的检查项
+                                        if (memberRoleInRelease && c.allowedRoles && c.allowedRoles.length > 0) {
+                                            return c.allowedRoles.includes(memberRoleInRelease);
+                                        }
+                                        return true;
+                                    });
+                                    
                                     if (memberChecklistItems.length === 0) {
                                         return <div className="member-no-content">该成员在当前阶段没有检查项</div>;
                                     }
@@ -6041,7 +4720,9 @@ export default function ReleaseDetailPage({ params }) {
                             {/* 填报内容 */}
                             {(() => {
                                 const content = viewingMember.content || {};
-                                const memberRoles = (viewingMember.user?.role || '').split(',');
+                                // 使用成员在该发版中的角色，而不是用户的所有角色
+                                const memberRoleInRelease = viewingMember.role || '';
+                                const memberRoles = memberRoleInRelease ? [memberRoleInRelease] : (viewingMember.user?.role || '').split(',');
                                 
                                 // 开发人员内容
                                 if (memberRoles.includes('RD') && (content.devName || content.contentDesc)) {
@@ -6179,6 +4860,10 @@ export default function ReleaseDetailPage({ params }) {
                                                     <label>验收时间</label>
                                                     <p>{content.poAcceptDate ? new Date(content.poAcceptDate).toLocaleDateString('zh-CN') : '-'}</p>
                                                 </div>
+                                                <div className="member-content-item full-width">
+                                                    <label>验收意见</label>
+                                                    <p>{content.poAcceptComment || '无'}</p>
+                                                </div>
                                             </div>
                                         </div>
                                     );
@@ -6202,6 +4887,10 @@ export default function ReleaseDetailPage({ params }) {
                                                     <label>审核时间</label>
                                                     <p>{content.dbaReviewDate ? new Date(content.dbaReviewDate).toLocaleDateString('zh-CN') : '-'}</p>
                                                 </div>
+                                                <div className="member-content-item full-width">
+                                                    <label>审核意见</label>
+                                                    <p>{content.dbaReviewComment || '无'}</p>
+                                                </div>
                                             </div>
                                         </div>
                                     );
@@ -6209,6 +4898,10 @@ export default function ReleaseDetailPage({ params }) {
                                 
                                 // OP 运维内容
                                 if (memberRoles.includes('OP') && content.opName) {
+                                    // 获取该运维人员上传的备份截图
+                                    const opBackupDocs = (release.documents || []).filter(
+                                        doc => doc.uploadedById === viewingMember.userId && doc.type === 'BACKUP_SCREENSHOT'
+                                    );
                                     return (
                                         <div className="member-detail-section">
                                             <h4>💾 运维信息</h4>
@@ -6225,10 +4918,39 @@ export default function ReleaseDetailPage({ params }) {
                                                     <label>备份时间</label>
                                                     <p>{content.opBackupDate ? new Date(content.opBackupDate).toLocaleDateString('zh-CN') : '-'}</p>
                                                 </div>
-                                                <div className="member-content-item full-width">
-                                                    <label>回滚方案</label>
-                                                    <p>{content.rollbackPlan || '-'}</p>
-                                                </div>
+                                            </div>
+                                            
+                                            {/* 备份截图 */}
+                                            <div className="member-content-subsection">
+                                                <h5>📸 备份截图</h5>
+                                                {opBackupDocs.length > 0 ? (
+                                                    <div className="member-docs-list">
+                                                        {opBackupDocs.map(doc => (
+                                                            <a 
+                                                                key={doc.id} 
+                                                                href={doc.filepath} 
+                                                                target="_blank" 
+                                                                className="member-doc-item"
+                                                            >
+                                                                <span className="member-doc-icon">📄</span>
+                                                                <div className="member-doc-info">
+                                                                    <span className="member-doc-name">{doc.filename}</span>
+                                                                    <span className="member-doc-meta">
+                                                                        {new Date(doc.createdAt).toLocaleString('zh-CN')}
+                                                                    </span>
+                                                                </div>
+                                                            </a>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="member-no-content">尚未上传备份截图</div>
+                                                )}
+                                            </div>
+                                            
+                                            {/* 回滚方案 */}
+                                            <div className="member-content-subsection">
+                                                <h5>🔄 回滚方案</h5>
+                                                <p className="rollback-plan-text">{content.rollbackPlan || '尚未填写回滚方案'}</p>
                                             </div>
                                         </div>
                                     );
@@ -6243,8 +4965,18 @@ export default function ReleaseDetailPage({ params }) {
                                 );
                             })()}
 
-                            {/* 该成员上传的附件 */}
+                            {/* 该成员上传的附件 - DBA 角色不显示附件区块 */}
                             {(() => {
+                                // 获取成员角色
+                                const memberRoleInRelease = viewingMember.role || '';
+                                const memberUserRoles = (viewingMember.user?.role || '').split(',');
+                                const memberRoles = memberRoleInRelease ? [memberRoleInRelease] : memberUserRoles;
+                                
+                                // DBA 角色不需要上传附件，隐藏此区块
+                                if (memberRoles.includes('DBA')) {
+                                    return null;
+                                }
+                                
                                 const memberDocs = (release.documents || []).filter(
                                     doc => doc.uploadedById === viewingMember.userId
                                 );

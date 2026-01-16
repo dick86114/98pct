@@ -9,13 +9,21 @@
     "postinstall": "prisma generate",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
-    "test:headed": "playwright test --headed"
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:full": "playwright test tests/full-flow.spec.js",
+    "test:multi-role": "playwright test tests/multi-role-flow.spec.js",
+    "test:basic": "playwright test tests/basic.spec.js",
+    "test:docker": "TEST_BASE_URL=http://localhost:9899 playwright test",
+    "test:setup": "node tests/setup-test-users.js",
+    "test:report": "playwright show-report"
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",
     "bcryptjs": "^2.4.3",
     "file-saver": "^2.0.5",
     "jsonwebtoken": "^9.0.2",
+    "jszip": "^3.10.1",
     "next": "14.2.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

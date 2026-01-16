@@ -8,11 +8,11 @@ import ConfirmModal from '@/components/ConfirmModal';
 
 // 字典类型定义
 const DICT_TYPES = [
-    { code: 'platform', name: '发版平台', desc: '发版申请时可选的平台' },
-    { code: 'system', name: '所属系统', desc: '开发人员填报变更时选择的系统' },
-    { code: 'status', name: '发版状态', desc: '发版记录的状态选项' },
-    { code: 'docType', name: '文档类型', desc: '上传文档时的类型选项' },
-    { code: 'dbChangeType', name: '数据库变更类型', desc: '数据库变更的类型选项' },
+    { code: 'platform', name: '发版平台', desc: '发版申请时可选的平台', icon: '🌐' },
+    { code: 'system', name: '所属系统', desc: '开发人员填报变更时选择的系统', icon: '💻' },
+    { code: 'status', name: '发版状态', desc: '发版记录的状态选项', icon: '📊' },
+    { code: 'docType', name: '文档类型', desc: '上传文档时的类型选项', icon: '📄' },
+    { code: 'dbChangeType', name: '数据库变更类型', desc: '数据库变更的类型选项', icon: '🗄️' },
 ];
 
 export default function DictionaryPage() {
@@ -200,7 +200,7 @@ export default function DictionaryPage() {
         return (
             <>
                 <Navbar />
-                <div className="loading" style={{ minHeight: 'calc(100vh - 64px)' }}>
+                <div className="loading">
                     <div className="loading-spinner"></div>
                 </div>
             </>
@@ -210,12 +210,16 @@ export default function DictionaryPage() {
     return (
         <>
             <Navbar />
-            <main className="dictionary-page">
+            <main className="page-container">
                 <div className="container">
+                    {/* 页面头部 */}
                     <div className="page-header">
-                        <div>
-                            <h1 className="page-title">数据字典管理</h1>
-                            <p className="page-subtitle">管理系统下拉选项和配置项</p>
+                        <div className="page-header-content">
+                            <div className="page-header-icon">📚</div>
+                            <div>
+                                <h1 className="page-title">数据字典管理</h1>
+                                <p className="page-subtitle">管理系统下拉选项和配置项</p>
+                            </div>
                         </div>
                     </div>
 
@@ -224,21 +228,24 @@ export default function DictionaryPage() {
                         {DICT_TYPES.map(type => (
                             <button
                                 key={type.code}
-                                className={`btn ${activeType === type.code ? 'btn-primary' : 'btn-secondary'}`}
+                                className={`dict-type-tab ${activeType === type.code ? 'active' : ''}`}
                                 onClick={() => setActiveType(type.code)}
                             >
-                                {type.name}
+                                <span className="tab-icon">{type.icon}</span>
+                                <span className="tab-name">{type.name}</span>
                             </button>
                         ))}
                     </div>
 
-                    <div className="card">
+                    {/* 字典内容卡片 */}
+                    <div className="card-static">
                         <div className="card-header">
-                            <div>
-                                <h3 className="card-title">{currentTypeInfo?.name}</h3>
-                                <p className="dict-type-desc">
-                                    {currentTypeInfo?.desc}
-                                </p>
+                            <div className="card-header-info">
+                                <h3 className="card-title">
+                                    <span className="title-icon">{currentTypeInfo?.icon}</span>
+                                    {currentTypeInfo?.name}
+                                </h3>
+                                <p className="card-desc">{currentTypeInfo?.desc}</p>
                             </div>
                             <button
                                 className="btn btn-primary"
@@ -252,8 +259,8 @@ export default function DictionaryPage() {
                         </div>
 
                         {/* 桌面端表格 */}
-                        <div className="table-container desktop-table">
-                            <table className="table">
+                        <div className="table-container" style={{ border: 'none', borderRadius: 0 }}>
+                            <table className="table dict-table">
                                 <thead>
                                     <tr>
                                         <th>编码</th>
@@ -266,40 +273,54 @@ export default function DictionaryPage() {
                                 <tbody>
                                     {items.length === 0 ? (
                                         <tr>
-                                            <td colSpan={5} className="empty-cell">
-                                                暂无数据，点击上方按钮添加
+                                            <td colSpan={5}>
+                                                <div className="empty-state">
+                                                    <div className="empty-icon">📝</div>
+                                                    <h3>暂无数据</h3>
+                                                    <p>点击上方按钮添加第一个选项</p>
+                                                </div>
                                             </td>
                                         </tr>
                                     ) : (
-                                        items.map((item) => (
-                                            <tr key={item.id} style={{ opacity: item.enabled ? 1 : 0.5 }}>
-                                                <td><code className="code-tag">{item.code}</code></td>
-                                                <td style={{ fontWeight: 500 }}>{item.name}</td>
-                                                <td>{item.sortOrder}</td>
+                                        items.map((item, index) => (
+                                            <tr 
+                                                key={item.id} 
+                                                className={!item.enabled ? 'row-disabled' : ''}
+                                                style={{ animationDelay: `${index * 0.05}s` }}
+                                            >
+                                                <td>
+                                                    <code className="code-tag">{item.code}</code>
+                                                </td>
+                                                <td>
+                                                    <span className="item-name">{item.name}</span>
+                                                </td>
+                                                <td>
+                                                    <span className="sort-order">{item.sortOrder}</span>
+                                                </td>
                                                 <td>
                                                     <span className={`badge ${item.enabled ? 'badge-success' : 'badge-secondary'}`}>
                                                         {item.enabled ? '启用' : '禁用'}
                                                     </span>
                                                 </td>
                                                 <td className="text-right">
-                                                    <div className="table-actions">
+                                                    <div className="action-buttons">
                                                         <button
-                                                            className="btn btn-secondary btn-sm"
+                                                            className={`btn btn-sm btn-ghost ${item.enabled ? '' : 'btn-success-ghost'}`}
                                                             onClick={() => handleToggleEnabled(item)}
                                                         >
-                                                            {item.enabled ? '禁用' : '启用'}
+                                                            {item.enabled ? '🚫 禁用' : '✅ 启用'}
                                                         </button>
                                                         <button
-                                                            className="btn btn-secondary btn-sm"
+                                                            className="btn btn-sm btn-ghost"
                                                             onClick={() => startEdit(item)}
                                                         >
-                                                            编辑
+                                                            ✏️ 编辑
                                                         </button>
                                                         <button
-                                                            className="btn btn-danger btn-sm"
+                                                            className="btn btn-sm btn-ghost btn-danger-ghost"
                                                             onClick={() => handleDelete(item)}
                                                         >
-                                                            删除
+                                                            🗑️ 删除
                                                         </button>
                                                     </div>
                                                 </td>
@@ -309,69 +330,26 @@ export default function DictionaryPage() {
                                 </tbody>
                             </table>
                         </div>
-
-                        {/* 移动端卡片列表 */}
-                        <div className="mobile-list">
-                            {items.length === 0 ? (
-                                <div className="empty-cell">
-                                    暂无数据，点击上方按钮添加
-                                </div>
-                            ) : (
-                                items.map((item) => (
-                                    <div key={item.id} className={`dict-item-card ${!item.enabled ? 'disabled' : ''}`}>
-                                        <div className="dict-item-header">
-                                            <div>
-                                                <code className="code-tag">{item.code}</code>
-                                                <span className="dict-item-name">{item.name}</span>
-                                            </div>
-                                            <span className={`badge ${item.enabled ? 'badge-success' : 'badge-secondary'}`}>
-                                                {item.enabled ? '启用' : '禁用'}
-                                            </span>
-                                        </div>
-                                        <div className="dict-item-actions">
-                                            <button
-                                                className="btn btn-secondary"
-                                                onClick={() => handleToggleEnabled(item)}
-                                            >
-                                                {item.enabled ? '禁用' : '启用'}
-                                            </button>
-                                            <button
-                                                className="btn btn-secondary"
-                                                onClick={() => startEdit(item)}
-                                            >
-                                                编辑
-                                            </button>
-                                            <button
-                                                className="btn btn-danger"
-                                                onClick={() => handleDelete(item)}
-                                            >
-                                                删除
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
                     </div>
                 </div>
 
                 {/* 添加弹窗 */}
                 {showAddModal && (
-                    <div className="modal-overlay">
-                        <div className="card modal-card">
-                            <div className="card-header">
-                                <h3 className="card-title">添加{currentTypeInfo?.name}选项</h3>
-                                <button
-                                    onClick={() => setShowAddModal(false)}
-                                    className="modal-close-btn"
-                                >
-                                    ×
-                                </button>
+                    <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+                        <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <h3 className="modal-title">
+                                    <span className="modal-icon">➕</span>
+                                    添加{currentTypeInfo?.name}选项
+                                </h3>
+                                <button className="modal-close" onClick={() => setShowAddModal(false)}>×</button>
                             </div>
 
-                            <form onSubmit={handleAdd}>
+                            <form onSubmit={handleAdd} className="modal-body">
                                 <div className="form-group">
-                                    <label className="form-label">编码 <span className="required">*</span></label>
+                                    <label className="form-label">
+                                        编码 <span className="required">*</span>
+                                    </label>
                                     <input
                                         type="text"
                                         className="form-input"
@@ -380,12 +358,12 @@ export default function DictionaryPage() {
                                         onChange={(e) => setForm({ ...form, code: e.target.value })}
                                         required
                                     />
-                                    <small className="form-hint">
-                                        唯一标识，建议使用大写英文
-                                    </small>
+                                    <span className="form-hint">唯一标识，建议使用大写英文</span>
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label">名称 <span className="required">*</span></label>
+                                    <label className="form-label">
+                                        名称 <span className="required">*</span>
+                                    </label>
                                     <input
                                         type="text"
                                         className="form-input"
@@ -403,19 +381,15 @@ export default function DictionaryPage() {
                                         value={form.sortOrder}
                                         onChange={(e) => setForm({ ...form, sortOrder: e.target.value })}
                                     />
-                                    <small className="form-hint">
-                                        数字越小越靠前
-                                    </small>
+                                    <span className="form-hint">数字越小越靠前</span>
                                 </div>
 
-                                <div className="modal-actions">
-                                    <button type="submit" className="btn btn-primary">添加</button>
-                                    <button
-                                        type="button"
-                                        className="btn btn-secondary"
-                                        onClick={() => setShowAddModal(false)}
-                                    >
+                                <div className="modal-footer">
+                                    <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)}>
                                         取消
+                                    </button>
+                                    <button type="submit" className="btn btn-primary">
+                                        添加
                                     </button>
                                 </div>
                             </form>
@@ -425,34 +399,31 @@ export default function DictionaryPage() {
 
                 {/* 编辑弹窗 */}
                 {editingItem && (
-                    <div className="modal-overlay">
-                        <div className="card modal-card">
-                            <div className="card-header">
-                                <h3 className="card-title">编辑选项</h3>
-                                <button
-                                    onClick={() => setEditingItem(null)}
-                                    className="modal-close-btn"
-                                >
-                                    ×
-                                </button>
+                    <div className="modal-overlay" onClick={() => setEditingItem(null)}>
+                        <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <h3 className="modal-title">
+                                    <span className="modal-icon">✏️</span>
+                                    编辑选项
+                                </h3>
+                                <button className="modal-close" onClick={() => setEditingItem(null)}>×</button>
                             </div>
 
-                            <form onSubmit={handleUpdate}>
+                            <form onSubmit={handleUpdate} className="modal-body">
                                 <div className="form-group">
                                     <label className="form-label">编码</label>
                                     <input
                                         type="text"
-                                        className="form-input"
+                                        className="form-input form-input-disabled"
                                         value={form.code}
                                         disabled
-                                        style={{ background: 'var(--bg-tertiary)' }}
                                     />
-                                    <small className="form-hint">
-                                        编码不可修改
-                                    </small>
+                                    <span className="form-hint">编码不可修改</span>
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label">名称 <span className="required">*</span></label>
+                                    <label className="form-label">
+                                        名称 <span className="required">*</span>
+                                    </label>
                                     <input
                                         type="text"
                                         className="form-input"
@@ -471,14 +442,12 @@ export default function DictionaryPage() {
                                     />
                                 </div>
 
-                                <div className="modal-actions">
-                                    <button type="submit" className="btn btn-primary">保存</button>
-                                    <button
-                                        type="button"
-                                        className="btn btn-secondary"
-                                        onClick={() => setEditingItem(null)}
-                                    >
+                                <div className="modal-footer">
+                                    <button type="button" className="btn btn-secondary" onClick={() => setEditingItem(null)}>
                                         取消
+                                    </button>
+                                    <button type="submit" className="btn btn-primary">
+                                        保存
                                     </button>
                                 </div>
                             </form>
@@ -491,168 +460,6 @@ export default function DictionaryPage() {
                     onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
                     {...confirmConfig}
                 />
-
-                <style jsx>{`
-                    .dictionary-page {
-                        padding: 32px 24px;
-                    }
-
-                    .dictionary-page .container {
-                        max-width: 1000px;
-                    }
-
-                    .dict-type-tabs {
-                        display: flex;
-                        gap: 8px;
-                        margin-bottom: 24px;
-                        flex-wrap: wrap;
-                    }
-
-                    .dict-type-desc {
-                        font-size: 13px;
-                        color: var(--text-muted);
-                        margin: 0;
-                    }
-
-                    .code-tag {
-                        background: var(--bg-tertiary);
-                        padding: 2px 6px;
-                        border-radius: 4px;
-                        font-size: 12px;
-                    }
-
-                    .table-actions {
-                        display: flex;
-                        justify-content: flex-end;
-                        gap: 8px;
-                    }
-
-                    .btn-sm {
-                        padding: 6px 12px;
-                        font-size: 12px;
-                    }
-
-                    .empty-cell {
-                        text-align: center;
-                        color: var(--text-muted);
-                        padding: 40px;
-                    }
-
-                    .mobile-list {
-                        display: none;
-                    }
-
-                    .dict-item-card {
-                        padding: 12px;
-                        background: var(--bg-tertiary);
-                        border-radius: var(--radius-sm);
-                        margin-bottom: 8px;
-                    }
-
-                    .dict-item-card.disabled {
-                        opacity: 0.5;
-                    }
-
-                    .dict-item-header {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        margin-bottom: 10px;
-                    }
-
-                    .dict-item-name {
-                        font-weight: 500;
-                        margin-left: 8px;
-                    }
-
-                    .dict-item-actions {
-                        display: flex;
-                        gap: 8px;
-                    }
-
-                    .dict-item-actions .btn {
-                        flex: 1;
-                        padding: 8px;
-                        font-size: 12px;
-                    }
-
-                    .modal-overlay {
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        right: 0;
-                        bottom: 0;
-                        background: rgba(0,0,0,0.7);
-                        backdrop-filter: blur(4px);
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        z-index: 1000;
-                        padding: 16px;
-                    }
-
-                    .modal-card {
-                        width: 400px;
-                        max-width: 100%;
-                        max-height: 90vh;
-                        overflow-y: auto;
-                    }
-
-                    .modal-close-btn {
-                        background: none;
-                        border: none;
-                        color: var(--text-muted);
-                        cursor: pointer;
-                        font-size: 20px;
-                    }
-
-                    .modal-actions {
-                        display: flex;
-                        gap: 10px;
-                        margin-top: 24px;
-                    }
-
-                    .modal-actions .btn {
-                        flex: 1;
-                    }
-
-                    .required {
-                        color: var(--error);
-                    }
-
-                    .form-hint {
-                        color: var(--text-muted);
-                        font-size: 12px;
-                        display: block;
-                        margin-top: 4px;
-                    }
-
-                    @media (max-width: 768px) {
-                        .dictionary-page {
-                            padding: 16px 12px;
-                        }
-
-                        .dict-type-tabs {
-                            margin-bottom: 16px;
-                        }
-
-                        .dict-type-tabs .btn {
-                            flex: 1 1 calc(50% - 4px);
-                            min-width: 0;
-                            font-size: 12px;
-                            padding: 8px 12px;
-                            text-align: center;
-                        }
-
-                        .desktop-table {
-                            display: none;
-                        }
-
-                        .mobile-list {
-                            display: block;
-                        }
-                    }
-                `}</style>
             </main>
         </>
     );

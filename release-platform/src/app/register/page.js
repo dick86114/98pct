@@ -6,16 +6,16 @@ import Navbar from '@/components/Navbar';
 import toast from 'react-hot-toast';
 
 const ROLES = [
-    { value: 'ADMIN', label: '超级管理员 (ADMIN)', desc: '系统管理、用户管理、数据字典管理' },
-    { value: 'PM', label: '项目经理 (PM)', desc: '流程发起者与总协调人' },
-    { value: 'RD', label: '开发人员 (RD)', desc: '负责代码合并、提交变更说明' },
-    { value: 'QA', label: '测试人员 (QA)', desc: '负责功能验收和冒烟测试' },
-    { value: 'PO', label: '产品经理 (PO)', desc: '负责业务验收' },
-    { value: 'DBA', label: '数据库管理员', desc: '负责数据安全与SQL审核' },
-    { value: 'OP', label: '应用运维', desc: '负责代码部署与服务管理' },
+    { value: 'ADMIN', label: '超级管理员', icon: '👑', desc: '系统管理、用户管理、数据字典管理' },
+    { value: 'PM', label: '项目经理', icon: '📊', desc: '流程发起者与总协调人' },
+    { value: 'RD', label: '开发人员', icon: '💻', desc: '负责代码合并、提交变更说明' },
+    { value: 'QA', label: '测试人员', icon: '🧪', desc: '负责功能验收和冒烟测试' },
+    { value: 'PO', label: '产品经理', icon: '📋', desc: '负责业务验收' },
+    { value: 'DBA', label: '数据库管理员', icon: '🗄️', desc: '负责数据安全与SQL审核' },
+    { value: 'OP', label: '应用运维', icon: '⚙️', desc: '负责代码部署与服务管理' },
 ];
 
-// 简单的 hasRole 实现，避免引入后端 auth 库
+// 简单的 hasRole 实现
 function hasRole(userRoleString, targetRole) {
     if (!userRoleString) return false;
     return userRoleString.split(',').includes(targetRole);
@@ -31,7 +31,7 @@ export default function RegisterPage() {
         password: '',
         confirmPassword: '',
     });
-    const [selectedRoles, setSelectedRoles] = useState(['RD']); // 默认选中 RD
+    const [selectedRoles, setSelectedRoles] = useState(['RD']);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -47,7 +47,6 @@ export default function RegisterPage() {
 
         try {
             const user = JSON.parse(userStr);
-            // 只有 ADMIN 可以添加用户
             if (!hasRole(user.role, 'ADMIN')) {
                 toast.error('只有超级管理员可以添加用户');
                 router.push('/dashboard');
@@ -59,12 +58,10 @@ export default function RegisterPage() {
 
     const handleRoleChange = (roleValue) => {
         if (selectedRoles.includes(roleValue)) {
-            // 移除角色 (至少保留一个)
             if (selectedRoles.length > 1) {
                 setSelectedRoles(selectedRoles.filter(r => r !== roleValue));
             }
         } else {
-            // 添加角色
             setSelectedRoles([...selectedRoles, roleValue]);
         }
     };
@@ -74,7 +71,6 @@ export default function RegisterPage() {
         setLoading(true);
         setError('');
 
-        // 验证密码匹配
         if (formData.password !== formData.confirmPassword) {
             setError('两次输入的密码不一致');
             toast.error('两次输入的密码不一致');
@@ -82,7 +78,6 @@ export default function RegisterPage() {
             return;
         }
 
-        // 验证密码长度
         if (formData.password.length < 6) {
             setError('密码长度至少6位');
             toast.error('密码长度至少6位');
@@ -90,7 +85,6 @@ export default function RegisterPage() {
             return;
         }
 
-        // 验证角色
         if (selectedRoles.length === 0) {
             setError('请至少选择一个角色');
             toast.error('请至少选择一个角色');
@@ -104,7 +98,7 @@ export default function RegisterPage() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` // 带上当前 PM 的 Token
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
                     username: formData.username,
@@ -112,7 +106,7 @@ export default function RegisterPage() {
                     email: formData.email,
                     phone: formData.phone,
                     password: formData.password,
-                    role: selectedRoles, // 发送数组
+                    role: selectedRoles,
                 }),
             });
 
@@ -136,150 +130,183 @@ export default function RegisterPage() {
     return (
         <>
             <Navbar />
-            <main style={{ padding: '32px 24px' }}>
-                <div className="container" style={{ maxWidth: '600px' }}>
+            <main className="page-container">
+                <div className="container" style={{ maxWidth: '700px' }}>
+                    {/* 页面头部 */}
                     <div className="page-header">
-                        <div>
-                            <h1 className="page-title">添加新成员</h1>
-                            <p className="page-subtitle">为团队创建新账号 (支持多角色)</p>
+                        <div className="page-header-content">
+                            <div className="page-header-icon">➕</div>
+                            <div>
+                                <h1 className="page-title">添加新成员</h1>
+                                <p className="page-subtitle">为团队创建新账号，支持多角色分配</p>
+                            </div>
                         </div>
                         <button
                             className="btn btn-secondary"
                             onClick={() => router.back()}
                         >
-                            取消
+                            ← 返回
                         </button>
                     </div>
 
-                    <div className="card">
+                    <div className="card-static">
                         {error && (
                             <div className="alert alert-error">
-                                <span>⚠️</span>
+                                <span className="alert-icon">⚠️</span>
                                 <span>{error}</span>
                             </div>
                         )}
 
                         <form onSubmit={handleSubmit}>
-                            <div className="form-group">
-                                <label className="form-label">用户名 <span style={{ color: 'var(--danger)' }}>*</span></label>
-                                <input
-                                    type="text"
-                                    className="form-input"
-                                    placeholder="用于登录的用户名"
-                                    value={formData.username}
-                                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                                    required
-                                />
+                            {/* 基本信息 */}
+                            <div className="form-section">
+                                <h4 className="form-section-title">
+                                    <span className="section-icon">📝</span>
+                                    基本信息
+                                </h4>
+                                <div className="form-grid">
+                                    <div className="form-group">
+                                        <label className="form-label">
+                                            用户名 <span className="required">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            placeholder="用于登录的用户名"
+                                            value={formData.username}
+                                            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">
+                                            姓名 <span className="required">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            placeholder="请输入真实姓名"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div className="form-grid">
+                                    <div className="form-group">
+                                        <label className="form-label">邮箱地址</label>
+                                        <input
+                                            type="email"
+                                            className="form-input"
+                                            placeholder="your@email.com"
+                                            value={formData.email}
+                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">
+                                            手机号 <span className="required">*</span>
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            className="form-input"
+                                            placeholder="请输入手机号"
+                                            value={formData.phone}
+                                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="form-group">
-                                <label className="form-label">姓名</label>
-                                <input
-                                    type="text"
-                                    className="form-input"
-                                    placeholder="请输入姓名"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    required
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label className="form-label">邮箱地址</label>
-                                <input
-                                    type="email"
-                                    className="form-input"
-                                    placeholder="your@email.com"
-                                    value={formData.email}
-                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                    required
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label className="form-label">手机号 <span style={{ color: 'var(--danger)' }}>*</span></label>
-                                <input
-                                    type="tel"
-                                    className="form-input"
-                                    placeholder="请输入手机号"
-                                    value={formData.phone}
-                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                    required
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label className="form-label" style={{ marginBottom: '12px', display: 'block' }}>角色选择</label>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {/* 角色选择 */}
+                            <div className="form-section">
+                                <h4 className="form-section-title">
+                                    <span className="section-icon">🎭</span>
+                                    角色分配
+                                    <span className="section-hint">（可多选）</span>
+                                </h4>
+                                <div className="role-grid">
                                     {ROLES.map((role) => {
                                         const isSelected = selectedRoles.includes(role.value);
                                         return (
                                             <div
                                                 key={role.value}
+                                                className={`role-card ${isSelected ? 'selected' : ''}`}
                                                 onClick={() => handleRoleChange(role.value)}
-                                                style={{
-                                                    padding: '12px',
-                                                    border: `1px solid ${isSelected ? 'var(--primary)' : 'var(--border-color)'}`,
-                                                    borderRadius: 'var(--radius-sm)',
-                                                    background: isSelected ? 'rgba(52, 120, 246, 0.1)' : 'var(--bg-tertiary)',
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    transition: 'all 0.2s'
-                                                }}
                                             >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isSelected}
-                                                    onChange={() => { }} // handled by div click
-                                                    style={{ marginRight: '12px', width: '16px', height: '16px' }}
-                                                />
-                                                <div>
-                                                    <div style={{ fontWeight: 500, color: isSelected ? 'var(--primary-light)' : 'var(--text-primary)' }}>
-                                                        {role.label}
-                                                    </div>
-                                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                                        {role.desc}
+                                                <div className="role-card-header">
+                                                    <span className="role-icon">{role.icon}</span>
+                                                    <div className="role-checkbox">
+                                                        {isSelected && <span>✓</span>}
                                                     </div>
                                                 </div>
+                                                <div className="role-card-body">
+                                                    <span className="role-label">{role.label}</span>
+                                                    <span className="role-code">{role.value}</span>
+                                                </div>
+                                                <p className="role-desc">{role.desc}</p>
                                             </div>
                                         );
                                     })}
                                 </div>
                             </div>
 
-                            <div className="form-group">
-                                <label className="form-label">初始密码</label>
-                                <input
-                                    type="password"
-                                    className="form-input"
-                                    placeholder="至少6位密码"
-                                    value={formData.password}
-                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                    required
-                                    minLength={6}
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label className="form-label">确认密码</label>
-                                <input
-                                    type="password"
-                                    className="form-input"
-                                    placeholder="再次输入密码"
-                                    value={formData.confirmPassword}
-                                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                    required
-                                />
+                            {/* 密码设置 */}
+                            <div className="form-section">
+                                <h4 className="form-section-title">
+                                    <span className="section-icon">🔐</span>
+                                    密码设置
+                                </h4>
+                                <div className="form-grid">
+                                    <div className="form-group">
+                                        <label className="form-label">
+                                            初始密码 <span className="required">*</span>
+                                        </label>
+                                        <input
+                                            type="password"
+                                            className="form-input"
+                                            placeholder="至少6位密码"
+                                            value={formData.password}
+                                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                            required
+                                            minLength={6}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">
+                                            确认密码 <span className="required">*</span>
+                                        </label>
+                                        <input
+                                            type="password"
+                                            className="form-input"
+                                            placeholder="再次输入密码"
+                                            value={formData.confirmPassword}
+                                            onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
                             <button
                                 type="submit"
-                                className="btn btn-primary"
-                                style={{ width: '100%', marginTop: '8px' }}
+                                className="btn btn-primary btn-glow btn-lg"
                                 disabled={loading}
+                                style={{ width: '100%' }}
                             >
-                                {loading ? '创建中...' : '确认添加'}
+                                {loading ? (
+                                    <>
+                                        <span className="loading-spinner-sm"></span>
+                                        创建中...
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="btn-icon">✨</span>
+                                        确认添加
+                                    </>
+                                )}
                             </button>
                         </form>
                     </div>

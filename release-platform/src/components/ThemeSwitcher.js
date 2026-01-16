@@ -1,140 +1,105 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useState, useRef, useEffect } from 'react';
 
 export default function ThemeSwitcher() {
     const { themeMode, setTheme } = useTheme();
-    const [showMenu, setShowMenu] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef(null);
 
-    // 点击外部关闭菜单
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (menuRef.current && !menuRef.current.contains(event.target)) {
-                setShowMenu(false);
+                setIsOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const themes = [
-        { value: 'light', label: '浅色', icon: '☀️' },
-        { value: 'dark', label: '深色', icon: '🌙' },
-        { value: 'system', label: '跟随系统', icon: '💻' },
+    const options = [
+        { value: 'light', label: '浅色', icon: SunIcon },
+        { value: 'dark', label: '深色', icon: MoonIcon },
+        { value: 'system', label: '跟随系统', icon: SystemIcon },
     ];
 
-    const currentTheme = themes.find(t => t.value === themeMode);
+    const currentOption = options.find(o => o.value === themeMode) || options[2];
+    const CurrentIcon = currentOption.icon;
 
     return (
-        <div ref={menuRef} className="theme-switcher">
-            <button
+        <div className="theme-switcher" ref={menuRef}>
+            <button 
                 className="theme-btn"
-                onClick={() => setShowMenu(!showMenu)}
-                title="切换主题"
+                onClick={() => setIsOpen(!isOpen)}
+                aria-label="切换主题"
             >
-                <span className="theme-icon">{currentTheme?.icon}</span>
+                <CurrentIcon />
             </button>
 
-            {showMenu && (
+            {isOpen && (
                 <div className="theme-menu">
-                    {themes.map((theme) => (
-                        <button
-                            key={theme.value}
-                            className={`theme-option ${themeMode === theme.value ? 'active' : ''}`}
-                            onClick={() => {
-                                setTheme(theme.value);
-                                setShowMenu(false);
-                            }}
-                        >
-                            <span className="theme-option-icon">{theme.icon}</span>
-                            <span className="theme-option-label">{theme.label}</span>
-                            {themeMode === theme.value && <span className="theme-check">✓</span>}
-                        </button>
-                    ))}
+                    {options.map((option) => {
+                        const Icon = option.icon;
+                        return (
+                            <button
+                                key={option.value}
+                                className={`theme-option ${themeMode === option.value ? 'active' : ''}`}
+                                onClick={() => {
+                                    setTheme(option.value);
+                                    setIsOpen(false);
+                                }}
+                            >
+                                <Icon />
+                                <span>{option.label}</span>
+                                {themeMode === option.value && <CheckIcon />}
+                            </button>
+                        );
+                    })}
                 </div>
             )}
-
-            <style jsx>{`
-                .theme-switcher {
-                    position: relative;
-                }
-
-                .theme-btn {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    width: 36px;
-                    height: 36px;
-                    background: var(--bg-tertiary);
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--radius-sm);
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                }
-
-                .theme-btn:hover {
-                    background: var(--bg-secondary);
-                    border-color: var(--primary);
-                }
-
-                .theme-icon {
-                    font-size: 18px;
-                }
-
-                .theme-menu {
-                    position: absolute;
-                    top: 100%;
-                    right: 0;
-                    margin-top: 8px;
-                    background: var(--bg-secondary);
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--radius-md);
-                    box-shadow: var(--shadow-lg);
-                    min-width: 140px;
-                    z-index: 1000;
-                    overflow: hidden;
-                }
-
-                .theme-option {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    width: 100%;
-                    padding: 10px 14px;
-                    background: transparent;
-                    border: none;
-                    color: var(--text-secondary);
-                    font-size: 13px;
-                    cursor: pointer;
-                    transition: all 0.15s ease;
-                    text-align: left;
-                }
-
-                .theme-option:hover {
-                    background: var(--bg-tertiary);
-                    color: var(--text-primary);
-                }
-
-                .theme-option.active {
-                    background: rgba(99, 102, 241, 0.1);
-                    color: var(--primary-light);
-                }
-
-                .theme-option-icon {
-                    font-size: 16px;
-                }
-
-                .theme-option-label {
-                    flex: 1;
-                }
-
-                .theme-check {
-                    color: var(--primary);
-                    font-size: 12px;
-                }
-            `}</style>
         </div>
+    );
+}
+
+function SunIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+        </svg>
+    );
+}
+
+function MoonIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+    );
+}
+
+function SystemIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+            <line x1="8" y1="21" x2="16" y2="21" />
+            <line x1="12" y1="17" x2="12" y2="21" />
+        </svg>
+    );
+}
+
+function CheckIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+        </svg>
     );
 }
