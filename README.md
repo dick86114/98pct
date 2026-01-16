@@ -41,6 +41,20 @@
 - **成员管理**：发版团队成员分配与内容填写
 - **发版总结**：完成后生成发版总结，支持导出 Excel
 
+### 平台截图
+1. 登陆页
+![alt text](release-platform/public/snapshots/login.png)
+2. 工作台
+![alt text](release-platform/public/snapshots/index.png)
+3. 发版记录
+![alt text](release-platform/public/snapshots/records.png)
+4. 用户管理
+![alt text](release-platform/public/snapshots/user.png)
+5. 发版总结
+![alt text](release-platform/public/snapshots/summary.png)
+6. 发版失败
+![alt text](release-platform/public/snapshots/fail.png)
+
 ### 角色职责
 
 | 角色 | 职责 |
