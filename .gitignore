@@ -36,7 +36,8 @@ Thumbs.db
 # 上传的文件（运行时生成）
 release-platform/public/uploads/*
 !release-platform/public/uploads/.gitkeep
-release-platform/uploads/
+release-platform/uploads/*
+!release-platform/uploads/.gitkeep
 
 # 测试输出
 test-results/

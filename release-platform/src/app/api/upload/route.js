@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import prisma from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
 
@@ -42,7 +42,7 @@ export async function POST(request) {
 
         // 生成唯一文件名
         const ext = path.extname(file.name);
-        const uniqueName = `${uuidv4()}${ext}`;
+        const uniqueName = `${randomUUID()}${ext}`;
         const filepath = path.join(uploadDir, uniqueName);
 
         // 保存文件
@@ -50,13 +50,13 @@ export async function POST(request) {
         const buffer = Buffer.from(bytes);
         await writeFile(filepath, buffer);
 
-        // 记录到数据库
+        // 记录到数据库（使用 API 路由提供文件访问）
         const document = await prisma.document.create({
             data: {
                 releaseId: releaseId ? parseInt(releaseId) : null,
                 type: documentType,
                 filename: file.name,
-                filepath: `/uploads/${dirName}/${uniqueName}`,
+                filepath: `/api/files/${dirName}/${uniqueName}`,
                 uploadedById: decoded.userId,
             },
             include: {
