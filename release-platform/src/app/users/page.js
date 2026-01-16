@@ -117,8 +117,10 @@ export default function UsersPage() {
 
             fetchUsers(token);
             setEditingUser(null);
+            setConfirmConfig(prev => ({ ...prev, isOpen: false }));
             toast.success('更新成功');
         } catch (error) {
+            setConfirmConfig(prev => ({ ...prev, isOpen: false }));
             toast.error(error.message);
         }
     };
@@ -156,8 +158,10 @@ export default function UsersPage() {
             }
 
             setUsers(users.filter(u => u.id !== userId));
+            setConfirmConfig(prev => ({ ...prev, isOpen: false }));
             toast.success('删除成功');
         } catch (error) {
+            setConfirmConfig(prev => ({ ...prev, isOpen: false }));
             toast.error(error.message);
         }
     };
@@ -326,7 +330,7 @@ export default function UsersPage() {
                                             <td>
                                                 <div className="user-cell">
                                                     <div className="user-avatar">
-                                                        {(user.name || '?')[0]}
+                                                        {(user.name || '?').slice(-1)}
                                                     </div>
                                                     <span className="user-name">{user.name}</span>
                                                 </div>
@@ -509,10 +513,10 @@ export default function UsersPage() {
                         setBatchText('');
                         setBatchResult(null);
                     }}>
-                        <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
-                            <div className="modal-header">
+                        <div className="modal modal-lg batch-import-modal" onClick={e => e.stopPropagation()}>
+                            <div className="modal-header batch-modal-header">
                                 <h3 className="modal-title">
-                                    <span className="modal-icon">📋</span>
+                                    <span className="batch-title-icon">👥</span>
                                     批量导入用户
                                 </h3>
                                 <button
@@ -527,118 +531,164 @@ export default function UsersPage() {
                                 </button>
                             </div>
 
-                            <div className="modal-body">
-                                {/* 格式说明 */}
-                                <div className="info-panel">
-                                    <div className="info-panel-header">
-                                        <span className="info-icon">📋</span>
-                                        <span className="info-title">数据格式说明</span>
-                                    </div>
-                                    <div className="info-panel-content">
-                                        <p>每行一个用户，字段用逗号或制表符分隔：</p>
-                                        <code className="code-block">
-                                            用户名, 姓名, 邮箱, 手机号, 角色, 密码(可选)
-                                        </code>
-                                        <p className="text-muted">
-                                            角色可选：PM, RD, QA, PO, DBA, OP（多角色用/分隔如 RD/QA）<br />
-                                            密码不填则默认为 123456
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* 示例 */}
-                                <div className="code-example">
-                                    <div className="code-example-header">示例数据</div>
-                                    <pre className="code-example-content">
-{`zhangsan, 张三, zhangsan@example.com, 13800138001, RD
-lisi, 李四, lisi@example.com, 13800138002, QA, mypassword
-wangwu, 王五, wangwu@example.com, 13800138003, RD`}
-                                    </pre>
-                                </div>
-
-                                {/* 文件上传 */}
-                                <div className="upload-section">
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        accept=".txt,.csv"
-                                        onChange={handleFileUpload}
-                                        style={{ display: 'none' }}
-                                    />
-                                    <button
-                                        type="button"
-                                        className="btn btn-secondary"
-                                        onClick={() => fileInputRef.current?.click()}
-                                    >
-                                        📁 上传文件 (.txt/.csv)
-                                    </button>
-                                </div>
-
-                                {/* 文本输入 */}
-                                <div className="form-group">
-                                    <label className="form-label">用户数据</label>
-                                    <textarea
-                                        className="form-input form-textarea"
-                                        rows={8}
-                                        placeholder="粘贴或输入用户数据..."
-                                        value={batchText}
-                                        onChange={(e) => setBatchText(e.target.value)}
-                                    />
-                                </div>
-
-                                {/* 预览解析结果 */}
-                                {batchText && (
-                                    <div className="preview-panel">
-                                        <div className="preview-header">
-                                            <span className="preview-icon">📊</span>
-                                            <span>解析预览：共 {parseBatchText(batchText).length} 条有效数据</span>
-                                        </div>
-                                        <div className="preview-content">
-                                            {parseBatchText(batchText).slice(0, 5).map((u, i) => (
-                                                <div key={i} className="preview-item">
-                                                    <span className="preview-index">{i + 1}.</span>
-                                                    <span>{u.username}</span>
-                                                    <span className="text-muted">|</span>
-                                                    <span>{u.name}</span>
-                                                    <span className="text-muted">|</span>
-                                                    <span>{u.phone}</span>
-                                                    <span className="text-muted">|</span>
-                                                    <span className="badge badge-info">{u.role}</span>
+                            <div className="modal-body batch-modal-body">
+                                <div className="batch-import-layout">
+                                    {/* 左侧：格式说明 */}
+                                    <div className="batch-import-guide">
+                                        <div className="guide-section">
+                                            <div className="guide-header">
+                                                <span className="guide-icon">📋</span>
+                                                <h4>数据格式</h4>
+                                            </div>
+                                            <div className="guide-content">
+                                                <p className="guide-desc">每行一个用户，字段用逗号或制表符分隔</p>
+                                                <div className="format-fields">
+                                                    <span className="field-tag field-required">用户名</span>
+                                                    <span className="field-tag field-required">姓名</span>
+                                                    <span className="field-tag field-required">邮箱</span>
+                                                    <span className="field-tag field-required">手机号</span>
+                                                    <span className="field-tag field-required">角色</span>
+                                                    <span className="field-tag field-optional">密码</span>
                                                 </div>
-                                            ))}
-                                            {parseBatchText(batchText).length > 5 && (
-                                                <div className="preview-more">
-                                                    ... 还有 {parseBatchText(batchText).length - 5} 条
+                                            </div>
+                                        </div>
+
+                                        <div className="guide-section">
+                                            <div className="guide-header">
+                                                <span className="guide-icon">🏷️</span>
+                                                <h4>可用角色</h4>
+                                            </div>
+                                            <div className="guide-content">
+                                                <div className="role-tags">
+                                                    <span className="role-tag role-pm">PM</span>
+                                                    <span className="role-tag role-rd">RD</span>
+                                                    <span className="role-tag role-qa">QA</span>
+                                                    <span className="role-tag role-po">PO</span>
+                                                    <span className="role-tag role-dba">DBA</span>
+                                                    <span className="role-tag role-op">OP</span>
+                                                </div>
+                                                <p className="guide-tip">💡 多角色用 / 分隔，如 RD/QA</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="guide-section">
+                                            <div className="guide-header">
+                                                <span className="guide-icon">📝</span>
+                                                <h4>示例数据</h4>
+                                            </div>
+                                            <div className="example-code">
+                                                <div className="example-line">
+                                                    <span className="line-num">1</span>
+                                                    <span className="line-content">zhangsan, 张三, zhangsan@example.com, 13800138001, RD</span>
+                                                </div>
+                                                <div className="example-line">
+                                                    <span className="line-num">2</span>
+                                                    <span className="line-content">lisi, 李四, lisi@example.com, 13800138002, QA, pwd123</span>
+                                                </div>
+                                                <div className="example-line">
+                                                    <span className="line-num">3</span>
+                                                    <span className="line-content">wangwu, 王五, wangwu@example.com, 13800138003, RD/QA</span>
+                                                </div>
+                                            </div>
+                                            <p className="guide-tip">🔐 密码不填默认为 123456</p>
+                                        </div>
+                                    </div>
+
+                                    {/* 右侧：数据输入 */}
+                                    <div className="batch-import-input">
+                                        <div className="input-header">
+                                            <h4>用户数据</h4>
+                                            <input
+                                                type="file"
+                                                ref={fileInputRef}
+                                                accept=".txt,.csv"
+                                                onChange={handleFileUpload}
+                                                style={{ display: 'none' }}
+                                            />
+                                            <button
+                                                type="button"
+                                                className="btn btn-sm btn-outline"
+                                                onClick={() => fileInputRef.current?.click()}
+                                            >
+                                                <span className="btn-icon">📁</span>
+                                                导入文件
+                                            </button>
+                                        </div>
+                                        
+                                        <div className="textarea-wrapper">
+                                            <textarea
+                                                className="batch-textarea"
+                                                placeholder="在此粘贴或输入用户数据，每行一个用户..."
+                                                value={batchText}
+                                                onChange={(e) => setBatchText(e.target.value)}
+                                            />
+                                            {!batchText && (
+                                                <div className="textarea-placeholder-icon">
+                                                    <span>📋</span>
+                                                    <span>粘贴数据</span>
                                                 </div>
                                             )}
                                         </div>
-                                    </div>
-                                )}
 
-                                {/* 执行结果 */}
-                                {batchResult && (
-                                    <div className={`result-panel ${batchResult.errorCount > 0 ? 'result-error' : 'result-success'}`}>
-                                        <div className="result-header">
-                                            <span className="result-icon">
-                                                {batchResult.errorCount > 0 ? '⚠️' : '✅'}
-                                            </span>
-                                            <span>{batchResult.message}</span>
-                                        </div>
-                                        {batchResult.errors?.length > 0 && (
-                                            <div className="result-errors">
-                                                <div className="error-title">失败详情：</div>
-                                                {batchResult.errors.map((err, i) => (
-                                                    <div key={i} className="error-item">
-                                                        第 {err.row} 行 {err.name ? `(${err.name})` : ''}: {err.error}
+                                        {/* 解析预览 */}
+                                        {batchText && parseBatchText(batchText).length > 0 && (
+                                            <div className="parse-preview">
+                                                <div className="preview-badge">
+                                                    <span className="preview-count">{parseBatchText(batchText).length}</span>
+                                                    <span>条有效数据</span>
+                                                </div>
+                                                <div className="preview-list">
+                                                    {parseBatchText(batchText).slice(0, 3).map((u, i) => (
+                                                        <div key={i} className="preview-user">
+                                                            <span className="preview-avatar">{u.name.slice(-1)}</span>
+                                                            <span className="preview-name">{u.name}</span>
+                                                            <span className="preview-role">{u.role}</span>
+                                                        </div>
+                                                    ))}
+                                                    {parseBatchText(batchText).length > 3 && (
+                                                        <div className="preview-more-badge">
+                                                            +{parseBatchText(batchText).length - 3} 更多
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* 执行结果 */}
+                                        {batchResult && (
+                                            <div className={`batch-result ${batchResult.errorCount > 0 ? 'result-has-error' : 'result-all-success'}`}>
+                                                <div className="result-summary">
+                                                    <span className="result-icon-lg">
+                                                        {batchResult.errorCount > 0 ? '⚠️' : '✅'}
+                                                    </span>
+                                                    <div className="result-text">
+                                                        <span className="result-title">{batchResult.message}</span>
+                                                        <span className="result-detail">
+                                                            成功 {batchResult.successCount} 个
+                                                            {batchResult.errorCount > 0 && `，失败 ${batchResult.errorCount} 个`}
+                                                        </span>
                                                     </div>
-                                                ))}
+                                                </div>
+                                                {batchResult.errors?.length > 0 && (
+                                                    <div className="result-error-list">
+                                                        {batchResult.errors.slice(0, 5).map((err, i) => (
+                                                            <div key={i} className="error-row">
+                                                                <span className="error-badge">第{err.row}行</span>
+                                                                <span className="error-msg">{err.error}</span>
+                                                            </div>
+                                                        ))}
+                                                        {batchResult.errors.length > 5 && (
+                                                            <div className="error-more">还有 {batchResult.errors.length - 5} 个错误...</div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
-                                )}
+                                </div>
                             </div>
 
-                            <div className="modal-footer">
+                            <div className="modal-footer batch-modal-footer">
                                 <button
                                     type="button"
                                     className="btn btn-secondary"
@@ -652,9 +702,9 @@ wangwu, 王五, wangwu@example.com, 13800138003, RD`}
                                 </button>
                                 <button
                                     type="button"
-                                    className="btn btn-primary"
+                                    className="btn btn-primary btn-glow"
                                     onClick={executeBatchCreate}
-                                    disabled={batchLoading || !batchText.trim()}
+                                    disabled={batchLoading || !batchText.trim() || parseBatchText(batchText).length === 0}
                                 >
                                     {batchLoading ? (
                                         <>

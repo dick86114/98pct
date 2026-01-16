@@ -201,7 +201,7 @@ export default function ReleaseDetailPage({ params }) {
                                 return (
                                     <div key={member.id} className="prep-content-item">
                                         <div className="prep-content-header">
-                                            <div className="prep-content-avatar">{(member.user?.name || '?')[0]}</div>
+                                            <div className="prep-content-avatar">{(member.user?.name || '?').slice(-1)}</div>
                                             <div className="prep-content-info">
                                                 <span className="prep-content-name">{content.devName || member.user?.name}</span>
                                                 <span className="prep-content-meta">{content.devPhone || '-'} · {content.system || '门户'}</span>
@@ -286,7 +286,7 @@ export default function ReleaseDetailPage({ params }) {
                                 return (
                                     <div key={member.id} className="prep-content-item compact">
                                         <div className="prep-content-header">
-                                            <div className="prep-content-avatar">{(member.user?.name || '?')[0]}</div>
+                                            <div className="prep-content-avatar">{(member.user?.name || '?').slice(-1)}</div>
                                             <div className="prep-content-info">
                                                 <span className="prep-content-name">{content.qaName}</span>
                                                 <span className="prep-content-meta">{content.qaPhone || '-'}</span>
@@ -328,7 +328,7 @@ export default function ReleaseDetailPage({ params }) {
                                 return (
                                     <div key={member.id} className="prep-content-item">
                                         <div className="prep-content-header">
-                                            <div className="prep-content-avatar">{(member.user?.name || '?')[0]}</div>
+                                            <div className="prep-content-avatar">{(member.user?.name || '?').slice(-1)}</div>
                                             <div className="prep-content-info">
                                                 <span className="prep-content-name">{content.dbaName}</span>
                                                 <span className="prep-content-meta">{content.dbaPhone || '-'}</span>
@@ -378,7 +378,7 @@ export default function ReleaseDetailPage({ params }) {
                                 return (
                                     <div key={member.id} className="prep-content-item">
                                         <div className="prep-content-header">
-                                            <div className="prep-content-avatar">{(member.user?.name || '?')[0]}</div>
+                                            <div className="prep-content-avatar">{(member.user?.name || '?').slice(-1)}</div>
                                             <div className="prep-content-info">
                                                 <span className="prep-content-name">{content.opName}</span>
                                                 <span className="prep-content-meta">{content.opPhone || '-'}</span>
@@ -429,7 +429,7 @@ export default function ReleaseDetailPage({ params }) {
                                     return (
                                         <div key={member.id} className="prep-content-item">
                                             <div className="prep-content-header">
-                                                <div className="prep-content-avatar">{(member.user?.name || '?')[0]}</div>
+                                                <div className="prep-content-avatar">{(member.user?.name || '?').slice(-1)}</div>
                                                 <div className="prep-content-info">
                                                     <span className="prep-content-name">{content.dbaExecName || content.dbaName || member.user?.name}</span>
                                                     <span className="prep-content-meta">{content.dbaExecPhone || content.dbaPhone || '-'}</span>
@@ -1785,7 +1785,7 @@ export default function ReleaseDetailPage({ params }) {
                                                 }).join('/');
                                                 return (
                                                     <div key={member.id} className="pm-member-card">
-                                                        <div className="pm-member-avatar">{(member.user?.name || '?')[0]}</div>
+                                                        <div className="pm-member-avatar">{(member.user?.name || '?').slice(-1)}</div>
                                                         <div className="pm-member-info">
                                                             <span className="pm-member-name">{member.user?.name}</span>
                                                             <span className="pm-member-role">{roleLabels}</span>
@@ -1821,7 +1821,7 @@ export default function ReleaseDetailPage({ params }) {
                                                             return (
                                                                 <div key={member.id} className="prep-content-item">
                                                                     <div className="prep-content-header">
-                                                                        <div className="prep-content-avatar">{(member.user?.name || '?')[0]}</div>
+                                                                        <div className="prep-content-avatar">{(member.user?.name || '?').slice(-1)}</div>
                                                                         <div className="prep-content-info">
                                                                             <span className="prep-content-name">{content.devName || member.user?.name}</span>
                                                                             <span className="prep-content-meta">{content.devPhone || '-'} · {content.system || '门户'}</span>
@@ -1906,7 +1906,7 @@ export default function ReleaseDetailPage({ params }) {
                                                             return (
                                                                 <div key={member.id} className="prep-content-item compact">
                                                                     <div className="prep-content-header">
-                                                                        <div className="prep-content-avatar">{(member.user?.name || '?')[0]}</div>
+                                                                        <div className="prep-content-avatar">{(member.user?.name || '?').slice(-1)}</div>
                                                                         <div className="prep-content-info">
                                                                             <span className="prep-content-name">{content.qaName}</span>
                                                                             <span className="prep-content-meta">{content.qaPhone || '-'}</span>
@@ -1948,7 +1948,7 @@ export default function ReleaseDetailPage({ params }) {
                                                             return (
                                                                 <div key={member.id} className="prep-content-item">
                                                                     <div className="prep-content-header">
-                                                                        <div className="prep-content-avatar">{(member.user?.name || '?')[0]}</div>
+                                                                        <div className="prep-content-avatar">{(member.user?.name || '?').slice(-1)}</div>
                                                                         <div className="prep-content-info">
                                                                             <span className="prep-content-name">{content.dbaName}</span>
                                                                             <span className="prep-content-meta">{content.dbaPhone || '-'}</span>
@@ -1998,7 +1998,7 @@ export default function ReleaseDetailPage({ params }) {
                                                             return (
                                                                 <div key={member.id} className="prep-content-item">
                                                                     <div className="prep-content-header">
-                                                                        <div className="prep-content-avatar">{(member.user?.name || '?')[0]}</div>
+                                                                        <div className="prep-content-avatar">{(member.user?.name || '?').slice(-1)}</div>
                                                                         <div className="prep-content-info">
                                                                             <span className="prep-content-name">{content.opName}</span>
                                                                             <span className="prep-content-meta">{content.opPhone || '-'}</span>
@@ -2049,7 +2049,7 @@ export default function ReleaseDetailPage({ params }) {
                                                                 return (
                                                                     <div key={member.id} className="prep-content-item">
                                                                         <div className="prep-content-header">
-                                                                            <div className="prep-content-avatar">{(member.user?.name || '?')[0]}</div>
+                                                                            <div className="prep-content-avatar">{(member.user?.name || '?').slice(-1)}</div>
                                                                             <div className="prep-content-info">
                                                                                 <span className="prep-content-name">{content.dbaExecName || content.dbaName || member.user?.name}</span>
                                                                                 <span className="prep-content-meta">{content.dbaExecPhone || content.dbaPhone || '-'}</span>
@@ -2179,7 +2179,7 @@ export default function ReleaseDetailPage({ params }) {
                                                 return (
                                                     <div key={member.id} className="pm-progress-card">
                                                         <div className="pm-progress-header">
-                                                            <div className="pm-progress-avatar">{(member.user?.name || '?')[0]}</div>
+                                                            <div className="pm-progress-avatar">{(member.user?.name || '?').slice(-1)}</div>
                                                             <div className="pm-progress-info">
                                                                 <span className="pm-progress-name">{member.user?.name}</span>
                                                                 <span className="pm-progress-role">{roleLabels}</span>
@@ -2251,7 +2251,7 @@ export default function ReleaseDetailPage({ params }) {
                                                     return (
                                                         <div key={member.id} className="pm-dev-section">
                                                             <div className="pm-dev-header">
-                                                                <div className="pm-dev-avatar">{(member.user?.name || '?')[0]}</div>
+                                                                <div className="pm-dev-avatar">{(member.user?.name || '?').slice(-1)}</div>
                                                                 <div className="pm-dev-info">
                                                                     <span className="pm-dev-name">{content.devName || member.user?.name || '未知'}</span>
                                                                     <span className="pm-dev-phone">{content.devPhone || '-'}</span>
@@ -2366,7 +2366,7 @@ export default function ReleaseDetailPage({ params }) {
                                                     return (
                                                         <div key={member.id} className="pm-qa-card">
                                                             <div className="pm-qa-header">
-                                                                <div className="pm-qa-avatar">{(member.user?.name || '?')[0]}</div>
+                                                                <div className="pm-qa-avatar">{(member.user?.name || '?').slice(-1)}</div>
                                                                 <div className="pm-qa-info">
                                                                     <span className="pm-qa-name">{content.qaName || member.user?.name || '未知'}</span>
                                                                     <span className="pm-qa-phone">{content.qaPhone || member.user?.phone || '-'}</span>
@@ -2461,7 +2461,7 @@ export default function ReleaseDetailPage({ params }) {
                                                     return (
                                                         <div key={member.id} className="pm-dba-card">
                                                             <div className="pm-dba-header">
-                                                                <div className="pm-dba-avatar">{(member.user?.name || '?')[0]}</div>
+                                                                <div className="pm-dba-avatar">{(member.user?.name || '?').slice(-1)}</div>
                                                                 <div className="pm-dba-info">
                                                                     <span className="pm-dba-name">{content.dbaName || member.user?.name || '未知'}</span>
                                                                     <span className="pm-dba-phone">{content.dbaPhone || member.user?.phone || '-'}</span>
@@ -2592,7 +2592,7 @@ export default function ReleaseDetailPage({ params }) {
                                                     return (
                                                         <div key={member.id} className="pm-op-card">
                                                             <div className="pm-op-header">
-                                                                <div className="pm-op-avatar">{(member.user?.name || '?')[0]}</div>
+                                                                <div className="pm-op-avatar">{(member.user?.name || '?').slice(-1)}</div>
                                                                 <div className="pm-op-info">
                                                                     <span className="pm-op-name">{content.opName || member.user?.name || '未知'}</span>
                                                                     <span className="pm-op-phone">{content.opPhone || member.user?.phone || '-'}</span>
@@ -2689,7 +2689,7 @@ export default function ReleaseDetailPage({ params }) {
                                                     return (
                                                         <div key={member.id} className="pm-dba-exec-card">
                                                             <div className="pm-dba-exec-header">
-                                                                <div className="pm-dba-exec-avatar">{(member.user?.name || '?')[0]}</div>
+                                                                <div className="pm-dba-exec-avatar">{(member.user?.name || '?').slice(-1)}</div>
                                                                 <div className="pm-dba-exec-info">
                                                                     <span className="pm-dba-exec-name">{content.dbaExecName || member.user?.name || '未知'}</span>
                                                                     <span className="pm-dba-exec-phone">{content.dbaExecPhone || member.user?.phone || '-'}</span>
@@ -3354,7 +3354,7 @@ export default function ReleaseDetailPage({ params }) {
                                                             >
                                                                 <div className="dev-change-header">
                                                                     <div className="dev-avatar">
-                                                                        {(member.user?.name || '?')[0]}
+                                                                        {(member.user?.name || '?').slice(-1)}
                                                                     </div>
                                                                     <div className="dev-info">
                                                                         <span className="dev-name">{member.user?.name || '未知'}</span>
@@ -3653,7 +3653,7 @@ export default function ReleaseDetailPage({ params }) {
                                                             >
                                                                 <div className="dev-change-header">
                                                                     <div className="dev-avatar">
-                                                                        {(member.user?.name || '?')[0]}
+                                                                        {(member.user?.name || '?').slice(-1)}
                                                                     </div>
                                                                     <div className="dev-info">
                                                                         <span className="dev-name">{member.user?.name || '未知'}</span>
@@ -3733,7 +3733,7 @@ export default function ReleaseDetailPage({ params }) {
                                                         <div key={member.id} className="qa-status-card">
                                                             <div className="qa-status-header">
                                                                 <div className="qa-avatar">
-                                                                    {(member.user?.name || '?')[0]}
+                                                                    {(member.user?.name || '?').slice(-1)}
                                                                 </div>
                                                                 <div className="qa-info">
                                                                     <span className="qa-name">{member.user?.name || '未知'}</span>
@@ -4067,7 +4067,7 @@ export default function ReleaseDetailPage({ params }) {
                                                         <div key={member.id} className="db-member-section">
                                                             <div className="db-member-header">
                                                                 <div className="db-member-avatar">
-                                                                    {(member.user?.name || '?')[0]}
+                                                                    {(member.user?.name || '?').slice(-1)}
                                                                 </div>
                                                                 <div className="db-member-info">
                                                                     <span className="db-member-name">{member.user?.name || '未知'}</span>
@@ -4649,7 +4649,7 @@ export default function ReleaseDetailPage({ params }) {
                         <div className="member-detail-header">
                             <div className="member-detail-title">
                                 <div className="member-detail-avatar">
-                                    {(viewingMember.user?.name || '?')[0]}
+                                    {(viewingMember.user?.name || '?').slice(-1)}
                                 </div>
                                 <div className="member-detail-info">
                                     <h3>{viewingMember.user?.name}</h3>

@@ -259,7 +259,7 @@ export default function NewReleasePage() {
                                                             {isSelected && <span>✓</span>}
                                                         </div>
                                                         <div className="member-option-avatar">
-                                                            {(u.name || '?')[0]}
+                                                            {(u.name || '?').slice(-1)}
                                                         </div>
                                                         <div className="member-option-info">
                                                             <span className="member-option-name">{u.name}</span>

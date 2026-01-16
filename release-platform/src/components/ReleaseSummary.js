@@ -583,7 +583,7 @@ export default function ReleaseSummary({ release, checklists }) {
                         return (
                             <div key={member.id} className="member-card-summary">
                                 <div className="member-avatar-summary">
-                                    {(member.user?.name || '?')[0]}
+                                    {(member.user?.name || '?').slice(-1)}
                                 </div>
                                 <div className="member-info-summary">
                                     <span className="member-name-summary">{member.user?.name}</span>
@@ -609,7 +609,7 @@ export default function ReleaseSummary({ release, checklists }) {
                                 <div key={member.id} className="change-card-summary">
                                     <div className="change-header-summary">
                                         <div className="change-author-summary">
-                                            <span className="author-avatar">{(content.devName || member.user?.name || '?')[0]}</span>
+                                            <span className="author-avatar">{(content.devName || member.user?.name || '?').slice(-1)}</span>
                                             <span className="author-name">{content.devName || member.user?.name}</span>
                                         </div>
                                         <span className="badge badge-info">{content.system || '门户'}</span>
@@ -680,7 +680,7 @@ export default function ReleaseSummary({ release, checklists }) {
                                 <div key={member.id} className="dba-exec-card-summary">
                                     <div className="dba-exec-header-summary">
                                         <div className="dba-info">
-                                            <span className="dba-avatar">{(content.dbaExecName || member.user?.name || '?')[0]}</span>
+                                            <span className="dba-avatar">{(content.dbaExecName || member.user?.name || '?').slice(-1)}</span>
                                             <span className="dba-name">{content.dbaExecName || member.user?.name}</span>
                                         </div>
                                         <span className="dba-time">

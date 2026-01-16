@@ -223,7 +223,7 @@ export default function ProfilePage() {
                     {/* 用户头像卡片 */}
                     <div className="profile-hero-card">
                         <div className="profile-avatar-large">
-                            {(user?.name || '?')[0]}
+                            {(user?.name || '?').slice(-1)}
                         </div>
                         <div className="profile-hero-info">
                             <h2 className="profile-name">{user?.name}</h2>

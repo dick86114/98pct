@@ -278,7 +278,7 @@ export default function AdminReleasesPage() {
                                             <td>
                                                 <div className="creator-cell">
                                                     <span className="creator-avatar">
-                                                        {(release.createdBy?.name || '?')[0]}
+                                                        {(release.createdBy?.name || '?').slice(-1)}
                                                     </span>
                                                     <span>{release.createdBy?.name}</span>
                                                 </div>
