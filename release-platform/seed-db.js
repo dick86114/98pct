@@ -6,6 +6,7 @@ async function main() {
     // Seed Roles
     const roles = [
         { code: 'ADMIN', name: '超级管理员' },
+        { code: 'LD', name: '领导' },
         { code: 'PM', name: '项目经理' },
         { code: 'RD', name: '开发人员' },
         { code: 'QA', name: '测试人员' },

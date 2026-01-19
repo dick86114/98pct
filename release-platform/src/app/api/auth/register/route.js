@@ -36,7 +36,7 @@ export async function POST(request) {
         }
 
         // 验证角色有效性
-        const validRoles = ['ADMIN', 'PM', 'RD', 'QA', 'PO', 'DBA', 'OP'];
+        const validRoles = ['ADMIN', 'LD', 'PM', 'RD', 'QA', 'PO', 'DBA', 'OP'];
         const invalidRoles = roleArray.filter(r => !validRoles.includes(r));
 
         if (invalidRoles.length > 0) {

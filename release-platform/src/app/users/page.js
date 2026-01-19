@@ -19,6 +19,12 @@ export default function UsersPage() {
     const [batchResult, setBatchResult] = useState(null);
     const fileInputRef = useRef(null);
 
+    // 排序和筛选状态
+    const [sortField, setSortField] = useState('createdAt');
+    const [sortOrder, setSortOrder] = useState('desc');
+    const [filterRole, setFilterRole] = useState('');
+    const [searchText, setSearchText] = useState('');
+
     // 编辑表单状态
     const [editForm, setEditForm] = useState({
         username: '',
@@ -254,6 +260,7 @@ export default function UsersPage() {
     const getRoleBadgeClass = (role) => {
         const roleStyles = {
             'ADMIN': 'badge-danger',
+            'LD': 'badge-leader',
             'PM': 'badge-primary',
             'RD': 'badge-info',
             'QA': 'badge-success',
@@ -262,6 +269,80 @@ export default function UsersPage() {
             'OP': 'badge-cyan'
         };
         return roleStyles[role] || 'badge-secondary';
+    };
+
+    // 排序和筛选后的用户列表
+    const filteredAndSortedUsers = () => {
+        let result = [...users];
+
+        // 筛选：按角色
+        if (filterRole) {
+            result = result.filter(user => 
+                user.role && user.role.split(',').includes(filterRole)
+            );
+        }
+
+        // 筛选：按搜索文本
+        if (searchText) {
+            const search = searchText.toLowerCase();
+            result = result.filter(user =>
+                (user.username && user.username.toLowerCase().includes(search)) ||
+                (user.name && user.name.toLowerCase().includes(search)) ||
+                (user.email && user.email.toLowerCase().includes(search))
+            );
+        }
+
+        // 排序
+        result.sort((a, b) => {
+            let aVal, bVal;
+
+            switch (sortField) {
+                case 'username':
+                    aVal = (a.username || '').toLowerCase();
+                    bVal = (b.username || '').toLowerCase();
+                    break;
+                case 'name':
+                    aVal = (a.name || '').toLowerCase();
+                    bVal = (b.name || '').toLowerCase();
+                    break;
+                case 'email':
+                    aVal = (a.email || '').toLowerCase();
+                    bVal = (b.email || '').toLowerCase();
+                    break;
+                case 'createdAt':
+                    aVal = new Date(a.createdAt).getTime();
+                    bVal = new Date(b.createdAt).getTime();
+                    break;
+                default:
+                    return 0;
+            }
+
+            if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+            if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        return result;
+    };
+
+    // 处理排序
+    const handleSort = (field) => {
+        if (sortField === field) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortOrder('asc');
+        }
+    };
+
+    // 获取排序图标
+    const getSortIcon = (field) => {
+        if (sortField !== field) {
+            return <span className="sort-icon">⇅</span>;
+        }
+        return sortOrder === 'asc' 
+            ? <span className="sort-icon active">↑</span>
+            : <span className="sort-icon active">↓</span>;
     };
 
     if (loading) {
@@ -287,7 +368,7 @@ export default function UsersPage() {
                             <div>
                                 <h1 className="page-title">用户管理</h1>
                                 <p className="page-subtitle">
-                                    管理团队成员与权限 · 共 <span className="text-glow">{users.length}</span> 人
+                                    管理团队成员与权限 · 共 <span className="text-glow">{filteredAndSortedUsers().length}</span> 人
                                 </p>
                             </div>
                         </div>
@@ -307,22 +388,68 @@ export default function UsersPage() {
                         </div>
                     </div>
 
+                    {/* 筛选和搜索栏 */}
+                    <div className="filter-bar">
+                        <div className="filter-group">
+                            <label className="filter-label">🔍 搜索</label>
+                            <input
+                                type="text"
+                                className="filter-input"
+                                placeholder="搜索用户名、姓名或邮箱..."
+                                value={searchText}
+                                onChange={(e) => setSearchText(e.target.value)}
+                            />
+                        </div>
+                        <div className="filter-group">
+                            <label className="filter-label">👥 角色筛选</label>
+                            <select
+                                className="filter-select"
+                                value={filterRole}
+                                onChange={(e) => setFilterRole(e.target.value)}
+                            >
+                                <option value="">全部角色</option>
+                                {roles.map(role => (
+                                    <option key={role.code} value={role.code}>
+                                        {role.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        {(searchText || filterRole) && (
+                            <button
+                                className="btn btn-sm btn-ghost"
+                                onClick={() => {
+                                    setSearchText('');
+                                    setFilterRole('');
+                                }}
+                            >
+                                ✕ 清除筛选
+                            </button>
+                        )}
+                    </div>
+
                     {/* 用户列表卡片 */}
                     <div className="card">
                         <div className="table-container">
                             <table className="table">
                                 <thead>
                                     <tr>
-                                        <th>用户名</th>
-                                        <th>姓名</th>
+                                        <th onClick={() => handleSort('username')} className="sortable">
+                                            用户名 {getSortIcon('username')}
+                                        </th>
+                                        <th onClick={() => handleSort('name')} className="sortable">
+                                            姓名 {getSortIcon('name')}
+                                        </th>
                                         <th>手机号</th>
                                         <th>角色</th>
-                                        <th>邮箱</th>
+                                        <th onClick={() => handleSort('email')} className="sortable">
+                                            邮箱 {getSortIcon('email')}
+                                        </th>
                                         <th>操作</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {users.map((user, index) => (
+                                    {filteredAndSortedUsers().map((user, index) => (
                                         <tr key={user.id} style={{ animationDelay: `${index * 0.05}s` }}>
                                             <td>
                                                 <span className="text-mono text-glow">{user.username || '-'}</span>
@@ -375,11 +502,11 @@ export default function UsersPage() {
                             </table>
                         </div>
 
-                        {users.length === 0 && (
+                        {filteredAndSortedUsers().length === 0 && (
                             <div className="empty-state">
                                 <div className="empty-icon">👤</div>
-                                <h3>暂无用户</h3>
-                                <p>点击"添加用户"创建第一个团队成员</p>
+                                <h3>{searchText || filterRole ? '没有符合条件的用户' : '暂无用户'}</h3>
+                                <p>{searchText || filterRole ? '尝试调整筛选条件' : '点击"添加用户"创建第一个团队成员'}</p>
                             </div>
                         )}
                     </div>

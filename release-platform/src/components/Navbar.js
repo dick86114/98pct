@@ -50,6 +50,8 @@ export default function Navbar() {
     }, []);
 
     const isAdmin = (user?.role || '').split(',').includes('ADMIN');
+    const isLeader = (user?.role || '').split(',').includes('LD');
+    const canViewAllReleases = isAdmin || isLeader;
 
     const handleLogout = () => {
         localStorage.removeItem('token');

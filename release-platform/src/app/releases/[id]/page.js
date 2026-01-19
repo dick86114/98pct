@@ -1521,14 +1521,16 @@ export default function ReleaseDetailPage({ params }) {
     const isPO = userRoleList.includes('PO');
     const isDBA = userRoleList.includes('DBA');
     const isOP = userRoleList.includes('OP');
+    const isLeader = userRoleList.includes('LD');
     
     // 判断当前用户是否是发版创建者
     const isCreator = release.createdById === user?.id;
     
     // 管理视图权限判断：
     // - ADMIN 始终有管理视图（可以看所有发版的全貌）
+    // - LD（领导）始终有管理视图（只读，可以查看所有发版）
     // - PM 只有在自己创建的发版中才有管理视图，作为成员参与时显示对应角色视图
-    const hasPMView = isAdmin || (isPM && isCreator);
+    const hasPMView = isAdmin || isLeader || (isPM && isCreator);
 
     // 内容编辑权限
     const canEditContent = (release.stage === 'PREPARATION' || release.stage === 'DRAFT') && (isRD || isPM);
@@ -1584,8 +1586,8 @@ export default function ReleaseDetailPage({ params }) {
                             </p>
                         </div>
                         <div className="header-actions">
-                            {/* 删除按钮：只有 ADMIN 或发版创建者可见 */}
-                            {(isAdmin || isCreator) && (
+                            {/* 删除按钮：只有 ADMIN 或发版创建者可见，领导不可见 */}
+                            {(isAdmin || isCreator) && !isLeader && (
                                 <button 
                                     className="btn btn-danger btn-sm" 
                                     onClick={handleDelete}
@@ -1603,7 +1605,7 @@ export default function ReleaseDetailPage({ params }) {
                     {/* 流程进度（含阶段指引） */}
                     <div className="card stage-card">
                         <StageProgress currentStage={release.stage} userRole={user?.role} />
-                        {!isFinished && hasPMView && (
+                        {!isFinished && hasPMView && !isLeader && (
                             <div className="stage-actions">
                                 <button className="btn btn-success" onClick={handleAdvanceStage} disabled={actionLoading}>
                                     {actionLoading ? '处理中...' : '✅ 推进到下一阶段'}
@@ -1714,7 +1716,7 @@ export default function ReleaseDetailPage({ params }) {
                                     <div className="card">
                                         <div className="card-header">
                                             <h3 className="card-title">📋 发版摘要</h3>
-                                            {!isEditingInfo ? (
+                                            {!isEditingInfo && !isLeader ? (
                                                 <button className="btn btn-sm btn-secondary" onClick={() => setIsEditingInfo(true)}>
                                                     ✏️ 编辑
                                                 </button>

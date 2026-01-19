@@ -22,12 +22,13 @@ export async function GET(request) {
         // 检查用户角色
         const userRoles = (decoded.role || '').split(',');
         const isAdmin = userRoles.includes('ADMIN');
+        const isLeader = userRoles.includes('LD');
         const isPM = userRoles.includes('PM');
 
-        // ADMIN 可以看到所有发版记录
+        // ADMIN 和 LD 可以看到所有发版记录
         // PM 只能看到自己创建的或参与的发版记录
         // 其他角色只能看到自己参与的
-        if (!isAdmin) {
+        if (!isAdmin && !isLeader) {
             if (isPM) {
                 // PM 只能看到自己创建的或参与的
                 where.OR = [

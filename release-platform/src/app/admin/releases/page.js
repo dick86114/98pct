@@ -43,6 +43,13 @@ export default function AdminReleasesPage() {
         onConfirm: () => {},
     });
 
+    // 排序和筛选状态
+    const [sortField, setSortField] = useState('createdAt');
+    const [sortOrder, setSortOrder] = useState('desc');
+    const [filterStage, setFilterStage] = useState('');
+    const [filterStatus, setFilterStatus] = useState('');
+    const [searchText, setSearchText] = useState('');
+
     useEffect(() => {
         checkPermission();
     }, []);
@@ -179,6 +186,87 @@ export default function AdminReleasesPage() {
         return styles[status] || 'badge-secondary';
     };
 
+    // 排序和筛选后的发版列表
+    const filteredAndSortedReleases = () => {
+        let result = [...releases];
+
+        // 筛选：按阶段
+        if (filterStage) {
+            result = result.filter(release => release.stage === filterStage);
+        }
+
+        // 筛选：按状态
+        if (filterStatus) {
+            result = result.filter(release => release.status === filterStatus);
+        }
+
+        // 筛选：按搜索文本
+        if (searchText) {
+            const search = searchText.toLowerCase();
+            result = result.filter(release =>
+                (release.version && release.version.toLowerCase().includes(search)) ||
+                (release.description && release.description.toLowerCase().includes(search)) ||
+                (release.createdBy?.name && release.createdBy.name.toLowerCase().includes(search))
+            );
+        }
+
+        // 排序
+        result.sort((a, b) => {
+            let aVal, bVal;
+
+            switch (sortField) {
+                case 'version':
+                    aVal = (a.version || '').toLowerCase();
+                    bVal = (b.version || '').toLowerCase();
+                    break;
+                case 'stage':
+                    aVal = a.stage || '';
+                    bVal = b.stage || '';
+                    break;
+                case 'status':
+                    aVal = a.status || '';
+                    bVal = b.status || '';
+                    break;
+                case 'plannedDate':
+                    aVal = a.plannedDate ? new Date(a.plannedDate).getTime() : 0;
+                    bVal = b.plannedDate ? new Date(b.plannedDate).getTime() : 0;
+                    break;
+                case 'createdAt':
+                    aVal = new Date(a.createdAt).getTime();
+                    bVal = new Date(b.createdAt).getTime();
+                    break;
+                default:
+                    return 0;
+            }
+
+            if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+            if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        return result;
+    };
+
+    // 处理排序
+    const handleSort = (field) => {
+        if (sortField === field) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortOrder('asc');
+        }
+    };
+
+    // 获取排序图标
+    const getSortIcon = (field) => {
+        if (sortField !== field) {
+            return <span className="sort-icon">⇅</span>;
+        }
+        return sortOrder === 'asc' 
+            ? <span className="sort-icon active">↑</span>
+            : <span className="sort-icon active">↓</span>;
+    };
+
     if (loading) {
         return (
             <>
@@ -202,10 +290,62 @@ export default function AdminReleasesPage() {
                             <div>
                                 <h1 className="page-title">发版记录管理</h1>
                                 <p className="page-subtitle">
-                                    管理所有发版记录 · 共 <span className="text-glow">{releases.length}</span> 条
+                                    管理所有发版记录 · 共 <span className="text-glow">{filteredAndSortedReleases().length}</span> 条
                                 </p>
                             </div>
                         </div>
+                    </div>
+
+                    {/* 筛选和搜索栏 */}
+                    <div className="filter-bar">
+                        <div className="filter-group">
+                            <label className="filter-label">🔍 搜索</label>
+                            <input
+                                type="text"
+                                className="filter-input"
+                                placeholder="搜索版本号、描述或创建人..."
+                                value={searchText}
+                                onChange={(e) => setSearchText(e.target.value)}
+                            />
+                        </div>
+                        <div className="filter-group">
+                            <label className="filter-label">📊 阶段筛选</label>
+                            <select
+                                className="filter-select"
+                                value={filterStage}
+                                onChange={(e) => setFilterStage(e.target.value)}
+                            >
+                                <option value="">全部阶段</option>
+                                {Object.entries(STAGE_LABELS).map(([key, label]) => (
+                                    <option key={key} value={key}>{label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="filter-group">
+                            <label className="filter-label">🏷️ 状态筛选</label>
+                            <select
+                                className="filter-select"
+                                value={filterStatus}
+                                onChange={(e) => setFilterStatus(e.target.value)}
+                            >
+                                <option value="">全部状态</option>
+                                {Object.entries(STATUS_LABELS).map(([key, label]) => (
+                                    <option key={key} value={key}>{label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        {(searchText || filterStage || filterStatus) && (
+                            <button
+                                className="btn btn-sm btn-ghost"
+                                onClick={() => {
+                                    setSearchText('');
+                                    setFilterStage('');
+                                    setFilterStatus('');
+                                }}
+                            >
+                                ✕ 清除筛选
+                            </button>
+                        )}
                     </div>
 
                     {/* 发版列表 */}
@@ -213,29 +353,39 @@ export default function AdminReleasesPage() {
                         <table className="table admin-table">
                             <thead>
                                 <tr>
-                                    <th>版本号</th>
+                                    <th onClick={() => handleSort('version')} className="sortable">
+                                        版本号 {getSortIcon('version')}
+                                    </th>
                                     <th>描述</th>
-                                    <th>阶段</th>
-                                    <th>状态</th>
-                                    <th>计划日期</th>
+                                    <th onClick={() => handleSort('stage')} className="sortable">
+                                        阶段 {getSortIcon('stage')}
+                                    </th>
+                                    <th onClick={() => handleSort('status')} className="sortable">
+                                        状态 {getSortIcon('status')}
+                                    </th>
+                                    <th onClick={() => handleSort('plannedDate')} className="sortable">
+                                        计划日期 {getSortIcon('plannedDate')}
+                                    </th>
                                     <th>创建人</th>
-                                    <th>创建时间</th>
+                                    <th onClick={() => handleSort('createdAt')} className="sortable">
+                                        创建时间 {getSortIcon('createdAt')}
+                                    </th>
                                     <th className="text-right">操作</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {releases.length === 0 ? (
+                                {filteredAndSortedReleases().length === 0 ? (
                                     <tr>
                                         <td colSpan={8}>
                                             <div className="empty-state">
                                                 <div className="empty-icon">📋</div>
-                                                <h3>暂无发版记录</h3>
-                                                <p>等待项目经理创建发版记录</p>
+                                                <h3>{searchText || filterStage || filterStatus ? '没有符合条件的发版记录' : '暂无发版记录'}</h3>
+                                                <p>{searchText || filterStage || filterStatus ? '尝试调整筛选条件' : '等待项目经理创建发版记录'}</p>
                                             </div>
                                         </td>
                                     </tr>
                                 ) : (
-                                    releases.map((release, index) => (
+                                    filteredAndSortedReleases().map((release, index) => (
                                         <tr key={release.id} style={{ animationDelay: `${index * 0.03}s` }}>
                                             <td>
                                                 <span 

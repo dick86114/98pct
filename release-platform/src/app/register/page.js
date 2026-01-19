@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 
 const ROLES = [
     { value: 'ADMIN', label: '超级管理员', icon: '👑', desc: '系统管理、用户管理、数据字典管理' },
+    { value: 'LD', label: '领导', icon: '👔', desc: '查看所有数据，但不能编辑' },
     { value: 'PM', label: '项目经理', icon: '📊', desc: '流程发起者与总协调人' },
     { value: 'RD', label: '开发人员', icon: '💻', desc: '负责代码合并、提交变更说明' },
     { value: 'QA', label: '测试人员', icon: '🧪', desc: '负责功能验收和冒烟测试' },

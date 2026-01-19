@@ -1112,6 +1112,12 @@ main {
   border-color: rgba(6, 182, 212, 0.2);
 }
 
+.badge-leader {
+  background: rgba(251, 191, 36, 0.1);
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.2);
+}
+
 /* ==================== 导航栏 ==================== */
 .navbar {
   position: sticky;
@@ -11701,5 +11707,149 @@ main {
 @media (max-width: 768px) {
     .mobile-menu-btn {
         display: flex;
+    }
+}
+
+/* ==================== 筛选栏样式 ==================== */
+.filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 24px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-sm);
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    flex: 1;
+    min-width: 200px;
+}
+
+.filter-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.filter-input {
+    flex: 1;
+    padding: 10px 14px;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+}
+
+.filter-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-subtle);
+    background: var(--bg-tertiary);
+}
+
+.filter-input::placeholder {
+    color: var(--text-dim);
+}
+
+.filter-select {
+    flex: 1;
+    padding: 10px 14px;
+    padding-right: 40px;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-subtle);
+    background-color: var(--bg-tertiary);
+}
+
+.filter-select option {
+    padding: 10px;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+[data-theme="light"] .filter-select option {
+    background-color: #ffffff;
+}
+
+/* ==================== 排序样式 ==================== */
+.sortable {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    transition: all var(--transition-fast);
+}
+
+.sortable:hover {
+    color: var(--primary-light);
+    background: var(--primary-subtle);
+}
+
+.sort-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    font-size: 12px;
+    color: var(--text-dim);
+    opacity: 0.5;
+    transition: all var(--transition-fast);
+}
+
+.sortable:hover .sort-icon {
+    opacity: 1;
+    color: var(--primary-light);
+}
+
+.sort-icon.active {
+    opacity: 1;
+    color: var(--primary);
+    font-weight: bold;
+}
+
+/* 响应式筛选栏 */
+@media (max-width: 768px) {
+    .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-group {
+        flex-direction: column;
+        align-items: stretch;
+        min-width: 100%;
+    }
+    
+    .filter-label {
+        font-size: 12px;
     }
 }

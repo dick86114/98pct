@@ -60,14 +60,15 @@ export async function GET(request, { params }) {
             return NextResponse.json({ error: '发版记录不存在' }, { status: 404 });
         }
 
-        // 权限检查：ADMIN 和 PM 可以查看所有，其他角色只能查看自己参与的
+        // 权限检查：ADMIN、LD 和 PM 可以查看所有，其他角色只能查看自己参与的
         const userRoles = (decoded.role || '').split(',');
         const isAdmin = userRoles.includes('ADMIN');
+        const isLeader = userRoles.includes('LD');
         const isPM = userRoles.includes('PM');
         const isCreator = release.createdById === decoded.userId;
         const isMember = release.members.some(m => m.userId === decoded.userId);
 
-        if (!isAdmin && !isPM && !isCreator && !isMember) {
+        if (!isAdmin && !isLeader && !isPM && !isCreator && !isMember) {
             return NextResponse.json({ error: '您没有权限查看此发版记录' }, { status: 403 });
         }
 
