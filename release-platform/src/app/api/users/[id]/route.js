@@ -65,7 +65,7 @@ export async function PUT(request, { params }) {
             let roleArray = Array.isArray(data.role) ? data.role : [data.role];
             roleArray = roleArray.filter(r => r && r.trim() !== '');
 
-            const validRoles = ['ADMIN', 'PM', 'RD', 'QA', 'PO', 'DBA', 'OP'];
+            const validRoles = ['ADMIN', 'LD', 'PM', 'RD', 'QA', 'PO', 'DBA', 'OP'];
             if (!roleArray.every(r => validRoles.includes(r))) {
                 return NextResponse.json({ error: '包含无效角色' }, { status: 400 });
             }

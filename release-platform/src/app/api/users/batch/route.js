@@ -37,7 +37,7 @@ export async function POST(request) {
             return NextResponse.json({ error: '单次最多创建 50 个用户' }, { status: 400 });
         }
 
-        const validRoles = ['ADMIN', 'PM', 'RD', 'QA', 'PO', 'DBA', 'OP'];
+        const validRoles = ['ADMIN', 'LD', 'PM', 'RD', 'QA', 'PO', 'DBA', 'OP'];
         const phoneRegex = /^1[3-9]\d{9}$/;
         const results = [];
         const errors = [];
