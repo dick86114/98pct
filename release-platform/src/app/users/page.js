@@ -537,7 +537,7 @@ export default function UsersPage() {
                                     <div className="batch-import-guide">
                                         <div className="guide-section">
                                             <div className="guide-header">
-                                                <span className="guide-icon">📋</span>
+                                                <span className="guide-icon">📄</span>
                                                 <h4>数据格式</h4>
                                             </div>
                                             <div className="guide-content">
@@ -555,7 +555,7 @@ export default function UsersPage() {
 
                                         <div className="guide-section">
                                             <div className="guide-header">
-                                                <span className="guide-icon">🏷️</span>
+                                                <span className="guide-icon">🔖</span>
                                                 <h4>可用角色</h4>
                                             </div>
                                             <div className="guide-content">
