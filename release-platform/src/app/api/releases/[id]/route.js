@@ -188,7 +188,7 @@ export async function PUT(request, { params }) {
         if (data.action === 'update_info') {
             if (!canManageRelease) return NextResponse.json({ error: '只有管理员或发版创建者可以修改发版信息' }, { status: 403 });
 
-            const { version, description, plannedDate } = data;
+            const { version, description, plannedDate, projectName, releaseType, impactScope, downtime } = data;
             if (!version || !description) return NextResponse.json({ error: '版本和描述不能为空' }, { status: 400 });
 
             // Check unique version if changed
@@ -202,10 +202,67 @@ export async function PUT(request, { params }) {
                 data: {
                     version,
                     description,
-                    plannedDate: plannedDate ? new Date(plannedDate) : null
+                    plannedDate: plannedDate ? new Date(plannedDate) : null,
+                    projectName: projectName || null,
+                    releaseType: releaseType || null,
+                    impactScope: impactScope || null,
+                    downtime: downtime !== undefined && downtime !== null && downtime !== '' ? parseInt(downtime) : null
                 }
             });
             return NextResponse.json({ message: '信息更新成功', release });
+        }
+
+        // ACTION: UPDATE_MEMBERS (ADMIN 或创建者 PM - 更新参与成员)
+        if (data.action === 'update_members') {
+            if (!canManageRelease) return NextResponse.json({ error: '只有管理员或发版创建者可以修改参与成员' }, { status: 403 });
+
+            const { members } = data;
+            if (!members || members.length === 0) {
+                return NextResponse.json({ error: '请至少选择一名参与人员' }, { status: 400 });
+            }
+
+            // 删除现有成员
+            await prisma.releaseMember.deleteMany({
+                where: { releaseId }
+            });
+
+            // 添加新成员
+            await prisma.releaseMember.createMany({
+                data: members.map(m => ({
+                    releaseId,
+                    userId: m.userId,
+                    role: m.role
+                }))
+            });
+
+            // 为新成员初始化检查清单
+            const checklists = getChecklistByStage(existing.stage);
+            for (const member of members) {
+                for (const item of checklists) {
+                    if (item.role === member.role) {
+                        await prisma.checklist.upsert({
+                            where: {
+                                releaseId_userId_stage_itemKey: {
+                                    releaseId,
+                                    userId: member.userId,
+                                    stage: existing.stage,
+                                    itemKey: item.key
+                                }
+                            },
+                            create: {
+                                releaseId,
+                                userId: member.userId,
+                                stage: existing.stage,
+                                itemKey: item.key,
+                                checked: false
+                            },
+                            update: {}
+                        });
+                    }
+                }
+            }
+
+            return NextResponse.json({ message: '成员更新成功' });
         }
 
         // ACTION: UPDATE_CONTENT (RD, 或创建者 PM - Basic Info, DB Changes, Config Changes)

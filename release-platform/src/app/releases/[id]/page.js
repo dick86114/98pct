@@ -11,6 +11,7 @@ import ReleaseSummary from '@/components/ReleaseSummary';
 import CustomSelect from '@/components/CustomSelect';
 import DatePicker from '@/components/DatePicker';
 import DateTimePicker from '@/components/DateTimePicker';
+import TreeMemberSelector from '@/components/TreeMemberSelector';
 import { toast } from 'react-hot-toast';
 import { STAGES, STAGE_LABELS, getAllChecklists, PREPARATION_CHECKLIST } from '@/lib/constants';
 import useDictionary from '@/hooks/useDictionary';
@@ -121,7 +122,11 @@ export default function ReleaseDetailPage({ params }) {
     const [infoForm, setInfoForm] = useState({
         version: '',
         description: '',
-        plannedDate: ''
+        plannedDate: '',
+        projectName: '',
+        releaseType: '',
+        impactScope: '',
+        downtime: ''
     });
 
     // 确认弹窗状态
@@ -142,6 +147,11 @@ export default function ReleaseDetailPage({ params }) {
 
     // 成员详情弹窗状态
     const [viewingMember, setViewingMember] = useState(null);
+
+    // 成员管理状态
+    const [isEditingMembers, setIsEditingMembers] = useState(false);
+    const [allUsers, setAllUsers] = useState([]);
+    const [selectedMembers, setSelectedMembers] = useState([]);
 
     // 局部刷新状态
     const [refreshing, setRefreshing] = useState(false);
@@ -669,7 +679,11 @@ export default function ReleaseDetailPage({ params }) {
             setInfoForm({
                 version: r.version,
                 description: r.description,
-                plannedDate: r.plannedDate ? r.plannedDate.split('T')[0] : ''
+                plannedDate: r.plannedDate ? r.plannedDate.split('T')[0] : '',
+                projectName: r.projectName || '',
+                releaseType: r.releaseType || '',
+                impactScope: r.impactScope || '',
+                downtime: r.downtime || ''
             });
 
             setChecklists(r.checklists || []);
@@ -1287,7 +1301,11 @@ export default function ReleaseDetailPage({ params }) {
                     action: 'update_info',
                     version: infoForm.version,
                     description: infoForm.description,
-                    plannedDate: infoForm.plannedDate
+                    plannedDate: infoForm.plannedDate,
+                    projectName: infoForm.projectName,
+                    releaseType: infoForm.releaseType,
+                    impactScope: infoForm.impactScope,
+                    downtime: infoForm.downtime ? parseInt(infoForm.downtime) : null
                 }),
             });
 
@@ -1297,6 +1315,75 @@ export default function ReleaseDetailPage({ params }) {
                 fetchReleaseDetail(token);
             } else {
                 toast.error('更新失败');
+            }
+        } catch (e) {
+            toast.error('更新出错');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    // 获取所有用户（用于成员管理）
+    const fetchAllUsers = async () => {
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch('/api/users?forRelease=true', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (res.ok) {
+                // 过滤掉 ADMIN 角色的用户
+                const filteredUsers = (data.users || []).filter(u => 
+                    !u.role?.split(',').includes('ADMIN')
+                );
+                setAllUsers(filteredUsers);
+            }
+        } catch (error) {
+            console.error('获取用户列表失败:', error);
+        }
+    };
+
+    // 开始编辑成员
+    const startEditMembers = () => {
+        // 初始化选中的成员
+        const currentMembers = (release.members || []).map(m => ({
+            userId: m.userId,
+            role: m.role
+        }));
+        setSelectedMembers(currentMembers);
+        setIsEditingMembers(true);
+        fetchAllUsers();
+    };
+
+    // 保存成员变更
+    const handleSaveMembers = async () => {
+        if (selectedMembers.length === 0) {
+            toast.error('请至少选择一名参与人员');
+            return;
+        }
+
+        setActionLoading(true);
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch(`/api/releases/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    action: 'update_members',
+                    members: selectedMembers
+                }),
+            });
+
+            if (res.ok) {
+                toast.success('成员更新成功');
+                setIsEditingMembers(false);
+                fetchReleaseDetail(token);
+            } else {
+                const data = await res.json();
+                toast.error(data.error || '更新失败');
             }
         } catch (e) {
             toast.error('更新出错');
@@ -1734,12 +1821,28 @@ export default function ReleaseDetailPage({ params }) {
                                             <>
                                                 <div className="info-grid">
                                                     <div className="info-item">
+                                                        <label>项目名称</label>
+                                                        <span>{release.projectName || '-'}</span>
+                                                    </div>
+                                                    <div className="info-item">
                                                         <label>版本号</label>
                                                         <span>{release.version}</span>
                                                     </div>
                                                     <div className="info-item">
                                                         <label>计划时间</label>
                                                         <span>{release.plannedDate ? new Date(release.plannedDate).toLocaleDateString() : '未设置'}</span>
+                                                    </div>
+                                                    <div className="info-item">
+                                                        <label>发版类型</label>
+                                                        <span>{release.releaseType || '-'}</span>
+                                                    </div>
+                                                    <div className="info-item">
+                                                        <label>影响范围</label>
+                                                        <span>{release.impactScope || '-'}</span>
+                                                    </div>
+                                                    <div className="info-item">
+                                                        <label>预计停服时长</label>
+                                                        <span>{release.downtime ? `${release.downtime} 分钟` : '-'}</span>
                                                     </div>
                                                     <div className="info-item">
                                                         <label>当前阶段</label>
@@ -1759,6 +1862,15 @@ export default function ReleaseDetailPage({ params }) {
                                             <div className="edit-form">
                                                 <div className="form-row">
                                                     <div className="form-group">
+                                                        <label className="form-label">项目名称</label>
+                                                        <input
+                                                            className="form-input"
+                                                            value={infoForm.projectName}
+                                                            onChange={e => setInfoForm({ ...infoForm, projectName: e.target.value })}
+                                                            placeholder="如: 用户中心"
+                                                        />
+                                                    </div>
+                                                    <div className="form-group">
                                                         <label className="form-label">版本号</label>
                                                         <input
                                                             className="form-input"
@@ -1766,12 +1878,45 @@ export default function ReleaseDetailPage({ params }) {
                                                             onChange={e => setInfoForm({ ...infoForm, version: e.target.value })}
                                                         />
                                                     </div>
+                                                </div>
+                                                <div className="form-row">
                                                     <div className="form-group">
                                                         <label className="form-label">计划时间</label>
                                                         <DatePicker
                                                             value={infoForm.plannedDate}
                                                             onChange={value => setInfoForm({ ...infoForm, plannedDate: value })}
                                                             placeholder="选择计划日期"
+                                                        />
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">发版类型</label>
+                                                        <input
+                                                            className="form-input"
+                                                            value={infoForm.releaseType}
+                                                            onChange={e => setInfoForm({ ...infoForm, releaseType: e.target.value })}
+                                                            placeholder="如: 常规发版"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="form-row">
+                                                    <div className="form-group">
+                                                        <label className="form-label">影响范围</label>
+                                                        <input
+                                                            className="form-input"
+                                                            value={infoForm.impactScope}
+                                                            onChange={e => setInfoForm({ ...infoForm, impactScope: e.target.value })}
+                                                            placeholder="如: 全量"
+                                                        />
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">预计停服时长（分钟）</label>
+                                                        <input
+                                                            type="number"
+                                                            className="form-input"
+                                                            value={infoForm.downtime}
+                                                            onChange={e => setInfoForm({ ...infoForm, downtime: e.target.value })}
+                                                            placeholder="如: 30"
+                                                            min="0"
                                                         />
                                                     </div>
                                                 </div>
@@ -1800,26 +1945,70 @@ export default function ReleaseDetailPage({ params }) {
                                     <div className="card" style={{ marginTop: '20px' }}>
                                         <div className="card-header">
                                             <h3 className="card-title">👥 发版成员</h3>
-                                            <span className="card-subtitle">共 {(release.members || []).length} 人参与</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <span className="card-subtitle">共 {(release.members || []).length} 人参与</span>
+                                                {!isEditingMembers && !isLeader && (
+                                                    <button className="btn btn-sm btn-secondary" onClick={startEditMembers}>
+                                                        ✏️ 编辑成员
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="pm-member-grid">
-                                            {(release.members || []).map(member => {
-                                                const memberRoles = (member.user?.role || '').split(',');
-                                                const roleLabels = memberRoles.map(r => {
-                                                    const labels = { PM: '项目经理', RD: '开发', QA: '测试', PO: '产品', DBA: 'DBA', OP: '运维' };
-                                                    return labels[r] || r;
-                                                }).join('/');
-                                                return (
-                                                    <div key={member.id} className="pm-member-card">
-                                                        <div className="pm-member-avatar">{(member.user?.name || '?').slice(-1)}</div>
-                                                        <div className="pm-member-info">
-                                                            <span className="pm-member-name">{member.user?.name}</span>
-                                                            <span className="pm-member-role">{roleLabels}</span>
+                                        
+                                        {!isEditingMembers ? (
+                                            <div className="pm-member-grid">
+                                                {(release.members || []).map(member => {
+                                                    const memberRoles = (member.user?.role || '').split(',');
+                                                    const roleLabels = memberRoles.map(r => {
+                                                        const labels = { PM: '项目经理', RD: '开发', QA: '测试', PO: '产品', DBA: 'DBA', OP: '运维' };
+                                                        return labels[r] || r;
+                                                    }).join('/');
+                                                    return (
+                                                        <div key={member.id} className="pm-member-card">
+                                                            <div className="pm-member-avatar">{(member.user?.name || '?').slice(-1)}</div>
+                                                            <div className="pm-member-info">
+                                                                <span className="pm-member-name">{member.user?.name}</span>
+                                                                <span className="pm-member-role">{roleLabels}</span>
+                                                            </div>
                                                         </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <div style={{ padding: '20px' }}>
+                                                <p className="card-desc" style={{ marginBottom: '16px' }}>
+                                                    选择涉及本次发版的人员（RD、QA、OP、DBA 等）
+                                                </p>
+                                                {allUsers.length === 0 ? (
+                                                    <div className="empty-state-sm">
+                                                        <span className="empty-icon">👤</span>
+                                                        <span>暂无可选人员</span>
                                                     </div>
-                                                );
-                                            })}
-                                        </div>
+                                                ) : (
+                                                    <TreeMemberSelector
+                                                        allUsers={allUsers.filter(u => u.id !== user?.id)}
+                                                        selectedMembers={selectedMembers}
+                                                        onChange={setSelectedMembers}
+                                                        excludeRoles={['PM', 'LD']}
+                                                    />
+                                                )}
+                                                <div className="btn-group" style={{ marginTop: '16px' }}>
+                                                    <button 
+                                                        className="btn btn-primary btn-sm" 
+                                                        onClick={handleSaveMembers} 
+                                                        disabled={actionLoading || selectedMembers.length === 0}
+                                                    >
+                                                        💾 保存
+                                                    </button>
+                                                    <button 
+                                                        className="btn btn-secondary btn-sm" 
+                                                        onClick={() => setIsEditingMembers(false)}
+                                                    >
+                                                        取消
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* 实施/验证阶段显示准备阶段的所有填报内容 */}

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import DatePicker from '@/components/DatePicker';
 import CustomSelect from '@/components/CustomSelect';
+import TreeMemberSelector from '@/components/TreeMemberSelector';
 import useDictionary from '@/hooks/useDictionary';
 import toast from 'react-hot-toast';
 
@@ -284,88 +285,19 @@ export default function NewReleasePage() {
                                 选择涉及本次发版的人员（RD、QA、OP、DBA 等）
                             </p>
 
-                            <div className="member-selector">
-                                {allUsers.filter(u => u.id !== user?.id).length === 0 ? (
-                                    <div className="empty-state-sm">
-                                        <span className="empty-icon">👤</span>
-                                        <span>暂无可选人员</span>
-                                    </div>
-                                ) : (
-                                    <div className="member-grid">
-                                        {allUsers.filter(u => u.id !== user?.id).map(u => {
-                                            const memberEntry = selectedMembers.find(m => m.userId === u.id);
-                                            const isSelected = !!memberEntry;
-                                            const roles = (u.role || '').split(',').filter(r => r && r !== 'ADMIN');
-                                            return (
-                                                <div
-                                                    key={u.id}
-                                                    className={`member-option ${isSelected ? 'selected' : ''}`}
-                                                >
-                                                    <div 
-                                                        className="member-option-main"
-                                                        onClick={() => {
-                                                            if (isSelected) {
-                                                                // 取消选择
-                                                                setSelectedMembers(selectedMembers.filter(m => m.userId !== u.id));
-                                                            } else {
-                                                                // 选择成员，默认使用第一个非 ADMIN 角色
-                                                                const defaultRole = roles[0] || 'RD';
-                                                                setSelectedMembers([...selectedMembers, { userId: u.id, role: defaultRole }]);
-                                                            }
-                                                        }}
-                                                    >
-                                                        <div className="member-option-checkbox">
-                                                            {isSelected && <span>✓</span>}
-                                                        </div>
-                                                        <div className="member-option-avatar">
-                                                            {(u.name || '?').slice(-1)}
-                                                        </div>
-                                                        <div className="member-option-info">
-                                                            <span className="member-option-name">{u.name}</span>
-                                                            <div className="member-option-roles">
-                                                                {roles.slice(0, 2).map(role => (
-                                                                    <span 
-                                                                        key={role} 
-                                                                        className={`badge badge-sm ${getRoleBadgeClass(role)}`}
-                                                                    >
-                                                                        {ROLE_LABELS[role] || role}
-                                                                    </span>
-                                                                ))}
-                                                                {roles.length > 2 && (
-                                                                    <span className="badge badge-sm badge-secondary">
-                                                                        +{roles.length - 2}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    {/* 角色选择下拉框 - 仅当选中且有多个角色时显示 */}
-                                                    {isSelected && roles.length > 1 && (
-                                                        <div className="member-role-select">
-                                                            <label>参与角色：</label>
-                                                            <select
-                                                                value={memberEntry.role}
-                                                                onChange={(e) => {
-                                                                    setSelectedMembers(selectedMembers.map(m => 
-                                                                        m.userId === u.id ? { ...m, role: e.target.value } : m
-                                                                    ));
-                                                                }}
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            >
-                                                                {roles.map(role => (
-                                                                    <option key={role} value={role}>
-                                                                        {ROLE_LABELS[role] || role}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </div>
+                            {allUsers.filter(u => u.id !== user?.id).length === 0 ? (
+                                <div className="empty-state-sm">
+                                    <span className="empty-icon">👤</span>
+                                    <span>暂无可选人员</span>
+                                </div>
+                            ) : (
+                                <TreeMemberSelector
+                                    allUsers={allUsers.filter(u => u.id !== user?.id)}
+                                    selectedMembers={selectedMembers}
+                                    onChange={setSelectedMembers}
+                                    excludeRoles={['PM', 'LD']}
+                                />
+                            )}
 
                             {selectedMembers.length === 0 && (
                                 <div className="warning-hint">
