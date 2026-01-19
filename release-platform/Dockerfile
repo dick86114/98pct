@@ -59,11 +59,23 @@ COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
 COPY --from=builder /app/seed-db.js ./seed-db.js
 COPY --from=builder /app/docker-entrypoint.sh ./docker-entrypoint.sh
 
-# 创建上传目录并设置权限
-RUN mkdir -p /app/public/uploads && chown -R nextjs:nodejs /app/public/uploads
+# 创建上传目录并设置权限（777 确保挂载 volume 时也能写入）
+RUN mkdir -p /app/public/uploads && \
+    chown -R nextjs:nodejs /app/public/uploads && \
+    chmod -R 777 /app/public/uploads
 RUN chmod +x /app/docker-entrypoint.sh
 
-USER nextjs
+# 创建一个启动包装脚本，在切换用户前设置权限
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'mkdir -p /app/public/uploads' >> /app/start.sh && \
+    echo 'chmod -R 777 /app/public/uploads' >> /app/start.sh && \
+    echo 'chown -R nextjs:nodejs /app/public/uploads 2>/dev/null || true' >> /app/start.sh && \
+    echo 'su-exec nextjs:nodejs /app/docker-entrypoint.sh' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
+# 安装 su-exec（用于切换用户）
+USER root
+RUN apk add --no-cache su-exec
 
 EXPOSE 3000
 
@@ -73,4 +85,4 @@ ENV HOSTNAME="0.0.0.0"
 ENV PATH="/app/node_modules/.bin:$PATH"
 
 # 使用启动脚本（自动初始化数据库）
-CMD ["/app/docker-entrypoint.sh"]
+CMD ["/app/start.sh"]
