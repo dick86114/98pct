@@ -317,7 +317,7 @@ export default function UsersPage() {
                                         <th>姓名</th>
                                         <th>手机号</th>
                                         <th>角色</th>
-                                        <th>加入时间</th>
+                                        <th>邮箱</th>
                                         <th className="text-right">操作</th>
                                     </tr>
                                 </thead>
@@ -351,9 +351,7 @@ export default function UsersPage() {
                                                 </div>
                                             </td>
                                             <td>
-                                                <span className="text-muted text-sm">
-                                                    {new Date(user.createdAt).toLocaleDateString('zh-CN')}
-                                                </span>
+                                                <span className="text-muted">{user.email || '-'}</span>
                                             </td>
                                             <td className="text-right">
                                                 <div className="action-buttons">
