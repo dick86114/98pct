@@ -7594,10 +7594,83 @@ main {
 }
 
 /* PM 视图补充样式 */
-.pm-progress-list {
+.pm-progress-container {
   display: flex;
   flex-direction: column;
+  gap: 24px;
+}
+
+.pm-progress-role-group {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 20px;
+  transition: all var(--transition-fast);
+}
+
+.pm-progress-role-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.pm-progress-role-count {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+/* 角色徽章样式 */
+.badge-rd {
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--info);
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+.badge-qa {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.badge-po {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.badge-dba {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
+.badge-op {
+  background: rgba(139, 92, 246, 0.1);
+  color: #a78bfa;
+  border-color: rgba(139, 92, 246, 0.2);
+}
+
+.badge-pm {
+  background: var(--primary-subtle);
+  color: var(--primary-light);
+  border-color: rgba(14, 165, 233, 0.2);
+}
+
+.pm-progress-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
+}
+
+/* 响应式：小屏幕时改为单列 */
+@media (max-width: 1024px) {
+  .pm-progress-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 .pm-progress-card {
@@ -9396,12 +9469,16 @@ main {
 
 .stage-icon {
     font-size: 16px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
 }
 
 .stage-label {
     font-size: 13px;
     font-weight: 500;
     color: var(--text-secondary);
+    line-height: 1;
 }
 
 .date-info {
@@ -12445,5 +12522,104 @@ main {
 
   .feedback-status-actions .btn {
     flex: 1;
+  }
+}
+
+/* ==================== ReleaseInfo 组件 - 参与人员列表样式 ==================== */
+.members-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  padding: 20px;
+}
+
+.member-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.member-card:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.member-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px var(--primary-glow);
+}
+
+.member-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.member-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.member-role {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .members-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+    padding: 16px;
+  }
+  
+  .member-card {
+    padding: 10px;
+  }
+  
+  .member-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
+  
+  .member-name {
+    font-size: 13px;
+  }
+  
+  .member-role {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .members-grid {
+    grid-template-columns: 1fr;
   }
 }

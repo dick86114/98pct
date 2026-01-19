@@ -12,6 +12,7 @@ import CustomSelect from '@/components/CustomSelect';
 import DatePicker from '@/components/DatePicker';
 import DateTimePicker from '@/components/DateTimePicker';
 import TreeMemberSelector from '@/components/TreeMemberSelector';
+import ReleaseInfo from '@/components/ReleaseInfo';
 import { toast } from 'react-hot-toast';
 import { STAGES, STAGE_LABELS, getAllChecklists, PREPARATION_CHECKLIST } from '@/lib/constants';
 import useDictionary from '@/hooks/useDictionary';
@@ -192,11 +193,11 @@ export default function ReleaseDetailPage({ params }) {
                     </div>
                     <div className="prep-content-list">
                         {(release.members || []).filter(m => {
-                            const roles = (m.user?.role || '').split(',');
+                            const roles = (m.role || '').split(',');
                             return roles.includes('RD') && m.content?.contentDesc;
                         }).length > 0 ? (
                             (release.members || []).filter(m => {
-                                const roles = (m.user?.role || '').split(',');
+                                const roles = (m.role || '').split(',');
                                 return roles.includes('RD');
                             }).map(member => {
                                 const content = member.content || {};
@@ -278,11 +279,11 @@ export default function ReleaseDetailPage({ params }) {
                     </div>
                     <div className="prep-content-list">
                         {(release.members || []).filter(m => {
-                            const roles = (m.user?.role || '').split(',');
+                            const roles = (m.role || '').split(',');
                             return roles.includes('QA') && m.content?.qaName;
                         }).length > 0 ? (
                             (release.members || []).filter(m => {
-                                const roles = (m.user?.role || '').split(',');
+                                const roles = (m.role || '').split(',');
                                 return roles.includes('QA') && m.content?.qaName;
                             }).map(member => {
                                 const content = member.content || {};
@@ -320,11 +321,11 @@ export default function ReleaseDetailPage({ params }) {
                     </div>
                     <div className="prep-content-list">
                         {(release.members || []).filter(m => {
-                            const roles = (m.user?.role || '').split(',');
+                            const roles = (m.role || '').split(',');
                             return roles.includes('DBA') && m.content?.dbaName;
                         }).length > 0 ? (
                             (release.members || []).filter(m => {
-                                const roles = (m.user?.role || '').split(',');
+                                const roles = (m.role || '').split(',');
                                 return roles.includes('DBA') && m.content?.dbaName;
                             }).map(member => {
                                 const content = member.content || {};
@@ -370,11 +371,11 @@ export default function ReleaseDetailPage({ params }) {
                     </div>
                     <div className="prep-content-list">
                         {(release.members || []).filter(m => {
-                            const roles = (m.user?.role || '').split(',');
+                            const roles = (m.role || '').split(',');
                             return roles.includes('OP') && m.content?.opName;
                         }).length > 0 ? (
                             (release.members || []).filter(m => {
-                                const roles = (m.user?.role || '').split(',');
+                                const roles = (m.role || '').split(',');
                                 return roles.includes('OP') && m.content?.opName;
                             }).map(member => {
                                 const content = member.content || {};
@@ -421,11 +422,11 @@ export default function ReleaseDetailPage({ params }) {
                         </div>
                         <div className="prep-content-list">
                             {(release.members || []).filter(m => {
-                                const roles = (m.user?.role || '').split(',');
+                                const roles = (m.role || '').split(',');
                                 return roles.includes('DBA') && m.content?.dbaExecResult;
                             }).length > 0 ? (
                                 (release.members || []).filter(m => {
-                                    const roles = (m.user?.role || '').split(',');
+                                    const roles = (m.role || '').split(',');
                                     return roles.includes('DBA') && m.content?.dbaExecResult;
                                 }).map(member => {
                                     const content = member.content || {};
@@ -515,7 +516,15 @@ export default function ReleaseDetailPage({ params }) {
     // 根据用户角色和阶段设置默认标签页
     useEffect(() => {
         if (user && release && !defaultTabSet) {
-            const userRoles = (user.role || '').split(',');
+            // 找到当前用户在该发版中的成员记录
+            const currentMember = (release.members || []).find(m => m.userId === user.id);
+            
+            // 如果用户不是该发版的成员，使用用户的全部角色
+            // 如果用户是成员，使用其在该发版中的参与角色
+            const userRoles = currentMember 
+                ? (currentMember.role || '').split(',').filter(r => r)
+                : (user.role || '').split(',').filter(r => r);
+            
             let defaultTab = 'info';
             
             // 判断当前用户是否是发版创建者
@@ -1618,7 +1627,15 @@ export default function ReleaseDetailPage({ params }) {
     const isFinished = release.stage === 'COMPLETED' || release.stage === 'ROLLBACK';
 
     // 权限判断
-    const userRoleList = (user?.role || '').split(',');
+    // 找到当前用户在该发版中的成员记录
+    const currentMember = (release.members || []).find(m => m.userId === user?.id);
+    
+    // 如果用户不是该发版的成员，使用用户的全部角色
+    // 如果用户是成员，使用其在该发版中的参与角色
+    const userRoleList = currentMember 
+        ? (currentMember.role || '').split(',').filter(r => r)
+        : (user?.role || '').split(',').filter(r => r);
+    
     const isAdmin = userRoleList.includes('ADMIN');
     const isPM = userRoleList.includes('PM');
     const isRD = userRoleList.includes('RD');
@@ -1683,7 +1700,9 @@ export default function ReleaseDetailPage({ params }) {
                     <div className="page-header">
                         <div>
                             <div className="flex items-center gap-3">
-                                <h1 className="page-title">{release.version}</h1>
+                                <h1 className="page-title">
+                                    {release.projectName ? `${release.projectName} - ${release.version}` : release.version}
+                                </h1>
                                 <span className={`badge ${statusStyle.class}`}>{statusStyle.label}</span>
                             </div>
                             <p className="page-subtitle">
@@ -1747,7 +1766,7 @@ export default function ReleaseDetailPage({ params }) {
                                     // 获取所有参与发版的成员角色
                                     const participatingRoles = new Set();
                                     (release.members || []).forEach(member => {
-                                        const memberRoles = (member.user?.role || '').split(',');
+                                        const memberRoles = (member.role || '').split(',');
                                         memberRoles.forEach(role => participatingRoles.add(role.trim()));
                                     });
                                     
@@ -1969,7 +1988,7 @@ export default function ReleaseDetailPage({ params }) {
                                         {!isEditingMembers ? (
                                             <div className="pm-member-grid">
                                                 {(release.members || []).map(member => {
-                                                    const memberRoles = (member.user?.role || '').split(',');
+                                                    const memberRoles = (member.role || '').split(',');
                                                     const roleLabels = memberRoles.map(r => {
                                                         const labels = { PM: '项目经理', RD: '开发', QA: '测试', PO: '产品', DBA: 'DBA', OP: '运维' };
                                                         return labels[r] || r;
@@ -2035,11 +2054,11 @@ export default function ReleaseDetailPage({ params }) {
                                                 </div>
                                                 <div className="prep-content-list">
                                                     {(release.members || []).filter(m => {
-                                                        const roles = (m.user?.role || '').split(',');
+                                                        const roles = (m.role || '').split(',');
                                                         return roles.includes('RD') && m.content?.contentDesc;
                                                     }).length > 0 ? (
                                                         (release.members || []).filter(m => {
-                                                            const roles = (m.user?.role || '').split(',');
+                                                            const roles = (m.role || '').split(',');
                                                             return roles.includes('RD');
                                                         }).map(member => {
                                                             const content = member.content || {};
@@ -2121,11 +2140,11 @@ export default function ReleaseDetailPage({ params }) {
                                                 </div>
                                                 <div className="prep-content-list">
                                                     {(release.members || []).filter(m => {
-                                                        const roles = (m.user?.role || '').split(',');
+                                                        const roles = (m.role || '').split(',');
                                                         return roles.includes('QA') && m.content?.qaName;
                                                     }).length > 0 ? (
                                                         (release.members || []).filter(m => {
-                                                            const roles = (m.user?.role || '').split(',');
+                                                            const roles = (m.role || '').split(',');
                                                             return roles.includes('QA') && m.content?.qaName;
                                                         }).map(member => {
                                                             const content = member.content || {};
@@ -2163,11 +2182,11 @@ export default function ReleaseDetailPage({ params }) {
                                                 </div>
                                                 <div className="prep-content-list">
                                                     {(release.members || []).filter(m => {
-                                                        const roles = (m.user?.role || '').split(',');
+                                                        const roles = (m.role || '').split(',');
                                                         return roles.includes('DBA') && m.content?.dbaName;
                                                     }).length > 0 ? (
                                                         (release.members || []).filter(m => {
-                                                            const roles = (m.user?.role || '').split(',');
+                                                            const roles = (m.role || '').split(',');
                                                             return roles.includes('DBA') && m.content?.dbaName;
                                                         }).map(member => {
                                                             const content = member.content || {};
@@ -2213,11 +2232,11 @@ export default function ReleaseDetailPage({ params }) {
                                                 </div>
                                                 <div className="prep-content-list">
                                                     {(release.members || []).filter(m => {
-                                                        const roles = (m.user?.role || '').split(',');
+                                                        const roles = (m.role || '').split(',');
                                                         return roles.includes('OP') && m.content?.opName;
                                                     }).length > 0 ? (
                                                         (release.members || []).filter(m => {
-                                                            const roles = (m.user?.role || '').split(',');
+                                                            const roles = (m.role || '').split(',');
                                                             return roles.includes('OP') && m.content?.opName;
                                                         }).map(member => {
                                                             const content = member.content || {};
@@ -2264,11 +2283,11 @@ export default function ReleaseDetailPage({ params }) {
                                                     </div>
                                                     <div className="prep-content-list">
                                                         {(release.members || []).filter(m => {
-                                                            const roles = (m.user?.role || '').split(',');
+                                                            const roles = (m.role || '').split(',');
                                                             return roles.includes('DBA') && m.content?.dbaExecResult;
                                                         }).length > 0 ? (
                                                             (release.members || []).filter(m => {
-                                                                const roles = (m.user?.role || '').split(',');
+                                                                const roles = (m.role || '').split(',');
                                                                 return roles.includes('DBA') && m.content?.dbaExecResult;
                                                             }).map(member => {
                                                                 const content = member.content || {};
@@ -2384,63 +2403,119 @@ export default function ReleaseDetailPage({ params }) {
                                             </button>
                                         </div>
                                         
-                                        <div className="pm-progress-list">
-                                            {(release.members || []).map(member => {
-                                                const memberRoles = (member.user?.role || '').split(',');
-                                                const roleLabels = memberRoles.map(r => {
-                                                    const labels = { PM: '项目经理', RD: '开发', QA: '测试', PO: '产品', DBA: 'DBA', OP: '运维' };
-                                                    return labels[r] || r;
-                                                }).join('/');
+                                        <div className="pm-progress-container">
+                                            {(() => {
+                                                // 角色标签映射
+                                                const roleLabels = { RD: '开发', QA: '测试', PO: '产品', DBA: 'DBA', OP: '运维', PM: '项目经理' };
+                                                const roleOrder = ['RD', 'QA', 'PO', 'DBA', 'OP', 'PM'];
                                                 
-                                                // 计算该成员当前阶段的检查清单完成情况
-                                                const memberChecklists = checklists.filter(c => c.userId === member.userId && c.stage === release.stage);
-                                                const completedCount = memberChecklists.filter(c => c.checked).length;
-                                                const totalCount = memberChecklists.length;
-                                                const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+                                                // 按角色分组成员
+                                                const groupMembersByRole = () => {
+                                                    const groups = {};
+                                                    roleOrder.forEach(role => { groups[role] = []; });
+                                                    
+                                                    (release.members || []).forEach(member => {
+                                                        const memberRoles = (member.role || '').split(',').filter(r => r && r !== 'ADMIN');
+                                                        // 使用成员的第一个角色作为分组依据
+                                                        const mainRole = memberRoles[0];
+                                                        if (mainRole && groups[mainRole]) {
+                                                            groups[mainRole].push(member);
+                                                        }
+                                                    });
+                                                    
+                                                    // 对每个角色组的成员按姓名拼音排序
+                                                    Object.keys(groups).forEach(role => {
+                                                        groups[role].sort((a, b) => {
+                                                            const aName = a.user?.name || '';
+                                                            const bName = b.user?.name || '';
+                                                            return aName.localeCompare(bName, 'zh-CN');
+                                                        });
+                                                    });
+                                                    
+                                                    return groups;
+                                                };
                                                 
-                                                // 判断内容提交状态
-                                                const content = member.content || {};
-                                                const hasContent = content.devName || content.qaName || content.poName || content.dbaName || content.opName;
+                                                const memberGroups = groupMembersByRole();
                                                 
-                                                return (
-                                                    <div key={member.id} className="pm-progress-card">
-                                                        <div className="pm-progress-header">
-                                                            <div className="pm-progress-avatar">{(member.user?.name || '?').slice(-1)}</div>
-                                                            <div className="pm-progress-info">
-                                                                <span className="pm-progress-name">{member.user?.name}</span>
-                                                                <span className="pm-progress-role">{roleLabels}</span>
-                                                            </div>
-                                                            <button 
-                                                                className="btn btn-sm btn-secondary"
-                                                                onClick={() => setViewingMember(member)}
-                                                                style={{ marginLeft: 'auto', marginRight: '12px', padding: '4px 12px', fontSize: '12px' }}
-                                                            >
-                                                                查看详情
-                                                            </button>
-                                                            <div className={`pm-progress-badge ${progress === 100 ? 'complete' : progress > 0 ? 'in-progress' : 'pending'}`}>
-                                                                {progress === 100 ? '✅ 已完成' : progress > 0 ? `${progress}%` : '待开始'}
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        <div className="pm-progress-stats">
-                                                            <div className="pm-stat-item">
-                                                                <span className="pm-stat-label">检查项</span>
-                                                                <span className="pm-stat-value">{completedCount}/{totalCount}</span>
-                                                            </div>
-                                                            <div className="pm-stat-item">
-                                                                <span className="pm-stat-label">内容提交</span>
-                                                                <span className={`pm-stat-value ${hasContent ? 'done' : 'pending'}`}>
-                                                                    {hasContent ? '已提交' : '未提交'}
+                                                return roleOrder.map(role => {
+                                                    const members = memberGroups[role];
+                                                    if (members.length === 0) return null;
+                                                    
+                                                    return (
+                                                        <div key={role} className="pm-progress-role-group">
+                                                            {/* 角色组标题 */}
+                                                            <div className="pm-progress-role-header">
+                                                                <span className={`badge badge-${role.toLowerCase()}`}>
+                                                                    {roleLabels[role]}
+                                                                </span>
+                                                                <span className="pm-progress-role-count">
+                                                                    {members.length} 人
                                                                 </span>
                                                             </div>
+                                                            
+                                                            {/* 角色组成员列表（两列布局） */}
+                                                            <div className="pm-progress-list">
+                                                                {members.map(member => {
+                                                                    const memberRoles = (member.role || '').split(',');
+                                                                    const roleLabelsText = memberRoles.map(r => {
+                                                                        const labels = { PM: '项目经理', RD: '开发', QA: '测试', PO: '产品', DBA: 'DBA', OP: '运维' };
+                                                                        return labels[r] || r;
+                                                                    }).join('/');
+                                                                    
+                                                                    // 计算该成员当前阶段的检查清单完成情况
+                                                                    const memberChecklists = checklists.filter(c => c.userId === member.userId && c.stage === release.stage);
+                                                                    const completedCount = memberChecklists.filter(c => c.checked).length;
+                                                                    const totalCount = memberChecklists.length;
+                                                                    const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+                                                                    
+                                                                    // 判断内容提交状态
+                                                                    const content = member.content || {};
+                                                                    const hasContent = content.devName || content.qaName || content.poName || content.dbaName || content.opName;
+                                                                    
+                                                                    return (
+                                                                        <div key={member.id} className="pm-progress-card">
+                                                                            <div className="pm-progress-header">
+                                                                                <div className="pm-progress-avatar">{(member.user?.name || '?').slice(-1)}</div>
+                                                                                <div className="pm-progress-info">
+                                                                                    <span className="pm-progress-name">{member.user?.name}</span>
+                                                                                    <span className="pm-progress-role">{roleLabelsText}</span>
+                                                                                </div>
+                                                                                <button 
+                                                                                    className="btn btn-sm btn-secondary"
+                                                                                    onClick={() => setViewingMember(member)}
+                                                                                    style={{ marginLeft: 'auto', marginRight: '12px', padding: '4px 12px', fontSize: '12px' }}
+                                                                                >
+                                                                                    查看详情
+                                                                                </button>
+                                                                                <div className={`pm-progress-badge ${progress === 100 ? 'complete' : progress > 0 ? 'in-progress' : 'pending'}`}>
+                                                                                    {progress === 100 ? '✅ 已完成' : progress > 0 ? `${progress}%` : '待开始'}
+                                                                                </div>
+                                                                            </div>
+                                                                            
+                                                                            <div className="pm-progress-stats">
+                                                                                <div className="pm-stat-item">
+                                                                                    <span className="pm-stat-label">检查项</span>
+                                                                                    <span className="pm-stat-value">{completedCount}/{totalCount}</span>
+                                                                                </div>
+                                                                                <div className="pm-stat-item">
+                                                                                    <span className="pm-stat-label">内容提交</span>
+                                                                                    <span className={`pm-stat-value ${hasContent ? 'done' : 'pending'}`}>
+                                                                                        {hasContent ? '已提交' : '未提交'}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                            
+                                                                            <div className="pm-progress-bar">
+                                                                                <div className="pm-progress-fill" style={{ width: `${progress}%` }}></div>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
                                                         </div>
-                                                        
-                                                        <div className="pm-progress-bar">
-                                                            <div className="pm-progress-fill" style={{ width: `${progress}%` }}></div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
+                                                    );
+                                                });
+                                            })()}
                                         </div>
                                     </div>
                                 </div>
@@ -2466,11 +2541,11 @@ export default function ReleaseDetailPage({ params }) {
                                         
                                         <div className="pm-dev-list">
                                             {(release.members || []).filter(m => {
-                                                const roles = (m.user?.role || '').split(',');
+                                                const roles = (m.role || '').split(',');
                                                 return roles.includes('RD') && m.content;
                                             }).length > 0 ? (
                                                 (release.members || []).filter(m => {
-                                                    const roles = (m.user?.role || '').split(',');
+                                                    const roles = (m.role || '').split(',');
                                                     return roles.includes('RD');
                                                 }).map(member => {
                                                     const content = member.content || {};
@@ -2573,11 +2648,11 @@ export default function ReleaseDetailPage({ params }) {
                                         
                                         <div className="pm-qa-list">
                                             {(release.members || []).filter(m => {
-                                                const roles = (m.user?.role || '').split(',');
+                                                const roles = (m.role || '').split(',');
                                                 return roles.includes('QA');
                                             }).length > 0 ? (
                                                 (release.members || []).filter(m => {
-                                                    const roles = (m.user?.role || '').split(',');
+                                                    const roles = (m.role || '').split(',');
                                                     return roles.includes('QA');
                                                 }).map(member => {
                                                     const content = member.content || {};
@@ -2668,11 +2743,11 @@ export default function ReleaseDetailPage({ params }) {
                                         
                                         <div className="pm-dba-list">
                                             {(release.members || []).filter(m => {
-                                                const roles = (m.user?.role || '').split(',');
+                                                const roles = (m.role || '').split(',');
                                                 return roles.includes('DBA');
                                             }).length > 0 ? (
                                                 (release.members || []).filter(m => {
-                                                    const roles = (m.user?.role || '').split(',');
+                                                    const roles = (m.role || '').split(',');
                                                     return roles.includes('DBA');
                                                 }).map(member => {
                                                     const content = member.content || {};
@@ -2799,11 +2874,11 @@ export default function ReleaseDetailPage({ params }) {
                                         
                                         <div className="pm-op-list">
                                             {(release.members || []).filter(m => {
-                                                const roles = (m.user?.role || '').split(',');
+                                                const roles = (m.role || '').split(',');
                                                 return roles.includes('OP');
                                             }).length > 0 ? (
                                                 (release.members || []).filter(m => {
-                                                    const roles = (m.user?.role || '').split(',');
+                                                    const roles = (m.role || '').split(',');
                                                     return roles.includes('OP');
                                                 }).map(member => {
                                                     const content = member.content || {};
@@ -2902,11 +2977,11 @@ export default function ReleaseDetailPage({ params }) {
                                         
                                         <div className="pm-dba-exec-list">
                                             {(release.members || []).filter(m => {
-                                                const roles = (m.user?.role || '').split(',');
+                                                const roles = (m.role || '').split(',');
                                                 return roles.includes('DBA');
                                             }).length > 0 ? (
                                                 (release.members || []).filter(m => {
-                                                    const roles = (m.user?.role || '').split(',');
+                                                    const roles = (m.role || '').split(',');
                                                     return roles.includes('DBA');
                                                 }).map(member => {
                                                     const content = member.content || {};
@@ -3062,38 +3137,11 @@ export default function ReleaseDetailPage({ params }) {
 
                             {/* 发版信息标签页 */}
                             {activeTab === 'info' && (
-                                <div className="tab-content">
-                                    <div className="card">
-                                        <div className="card-header">
-                                            <h3 className="card-title">📋 发版摘要</h3>
-                                        </div>
-                                        <div className="info-grid">
-                                            <div className="info-item">
-                                                <label>版本号</label>
-                                                <span>{release.version}</span>
-                                            </div>
-                                            <div className="info-item">
-                                                <label>计划时间</label>
-                                                <span>{release.plannedDate ? new Date(release.plannedDate).toLocaleDateString() : '未设置'}</span>
-                                            </div>
-                                            <div className="info-item">
-                                                <label>当前阶段</label>
-                                                <span className="badge badge-primary">{STAGE_LABELS[release.stage]}</span>
-                                            </div>
-                                            <div className="info-item">
-                                                <label>创建人</label>
-                                                <span>{release.createdBy?.name}</span>
-                                            </div>
-                                        </div>
-                                        <div className="info-desc">
-                                            <label>发版描述</label>
-                                            <p>{release.description || '暂无描述'}</p>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* 实施/验证阶段显示所有填报内容 */}
-                                    {renderImplementationStageContent()}
-                                </div>
+                                <ReleaseInfo 
+                                    release={release} 
+                                    statusStyle={statusStyle} 
+                                    renderImplementationStageContent={renderImplementationStageContent} 
+                                />
                             )}
 
                             {/* 变更填报标签页 */}
@@ -3517,38 +3565,11 @@ export default function ReleaseDetailPage({ params }) {
 
                             {/* 发版信息标签页 */}
                             {activeTab === 'info' && (
-                                <div className="tab-content">
-                                    <div className="card">
-                                        <div className="card-header">
-                                            <h3 className="card-title">📋 发版摘要</h3>
-                                        </div>
-                                        <div className="info-grid">
-                                            <div className="info-item">
-                                                <label>版本号</label>
-                                                <span>{release.version}</span>
-                                            </div>
-                                            <div className="info-item">
-                                                <label>计划时间</label>
-                                                <span>{release.plannedDate ? new Date(release.plannedDate).toLocaleDateString() : '未设置'}</span>
-                                            </div>
-                                            <div className="info-item">
-                                                <label>当前阶段</label>
-                                                <span className="badge badge-primary">{STAGE_LABELS[release.stage]}</span>
-                                            </div>
-                                            <div className="info-item">
-                                                <label>创建人</label>
-                                                <span>{release.createdBy?.name}</span>
-                                            </div>
-                                        </div>
-                                        <div className="info-desc">
-                                            <label>发版描述</label>
-                                            <p>{release.description || '暂无描述'}</p>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* 实施/验证阶段显示所有填报内容 */}
-                                    {renderImplementationStageContent()}
-                                </div>
+                                <ReleaseInfo 
+                                    release={release} 
+                                    statusStyle={statusStyle} 
+                                    renderImplementationStageContent={renderImplementationStageContent} 
+                                />
                             )}
 
                             {/* 开发变更内容标签页 */}
@@ -3565,7 +3586,7 @@ export default function ReleaseDetailPage({ params }) {
                                                 // 只过滤 RD 角色的成员
                                                 const rdMembers = (release.members || []).filter(m => {
                                                     const memberRole = m.role || '';
-                                                    const userRoles = (m.user?.role || '').split(',');
+                                                    const userRoles = (m.role || '').split(',');
                                                     return (memberRole === 'RD' || userRoles.includes('RD')) && m.content;
                                                 });
                                                 
@@ -3816,38 +3837,11 @@ export default function ReleaseDetailPage({ params }) {
 
                             {/* 发版信息标签页 */}
                             {activeTab === 'info' && (
-                                <div className="tab-content">
-                                    <div className="card">
-                                        <div className="card-header">
-                                            <h3 className="card-title">📋 发版摘要</h3>
-                                        </div>
-                                        <div className="info-grid">
-                                            <div className="info-item">
-                                                <label>版本号</label>
-                                                <span>{release.version}</span>
-                                            </div>
-                                            <div className="info-item">
-                                                <label>计划时间</label>
-                                                <span>{release.plannedDate ? new Date(release.plannedDate).toLocaleDateString() : '未设置'}</span>
-                                            </div>
-                                            <div className="info-item">
-                                                <label>当前阶段</label>
-                                                <span className="badge badge-primary">{STAGE_LABELS[release.stage]}</span>
-                                            </div>
-                                            <div className="info-item">
-                                                <label>创建人</label>
-                                                <span>{release.createdBy?.name}</span>
-                                            </div>
-                                        </div>
-                                        <div className="info-desc">
-                                            <label>发版描述</label>
-                                            <p>{release.description || '暂无描述'}</p>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* 实施/验证阶段显示所有填报内容 */}
-                                    {renderImplementationStageContent()}
-                                </div>
+                                <ReleaseInfo 
+                                    release={release} 
+                                    statusStyle={statusStyle} 
+                                    renderImplementationStageContent={renderImplementationStageContent} 
+                                />
                             )}
 
                             {/* 开发变更内容标签页 */}
@@ -3864,7 +3858,7 @@ export default function ReleaseDetailPage({ params }) {
                                                 // 只过滤 RD 角色的成员
                                                 const rdMembers = (release.members || []).filter(m => {
                                                     const memberRole = m.role || '';
-                                                    const userRoles = (m.user?.role || '').split(',');
+                                                    const userRoles = (m.role || '').split(',');
                                                     return (memberRole === 'RD' || userRoles.includes('RD')) && m.content;
                                                 });
                                                 
@@ -3938,11 +3932,11 @@ export default function ReleaseDetailPage({ params }) {
                                         
                                         <div className="qa-status-list">
                                             {(release.members || []).filter(m => {
-                                                const memberRoles = (m.user?.role || '').split(',');
+                                                const memberRoles = (m.role || '').split(',');
                                                 return memberRoles.includes('QA');
                                             }).length > 0 ? (
                                                 (release.members || []).filter(m => {
-                                                    const memberRoles = (m.user?.role || '').split(',');
+                                                    const memberRoles = (m.role || '').split(',');
                                                     return memberRoles.includes('QA');
                                                 }).map(member => {
                                                     const content = member.content;
@@ -4241,38 +4235,11 @@ export default function ReleaseDetailPage({ params }) {
 
                             {/* 发版信息标签页 */}
                             {activeTab === 'info' && (
-                                <div className="tab-content">
-                                    <div className="card">
-                                        <div className="card-header">
-                                            <h3 className="card-title">📋 发版摘要</h3>
-                                        </div>
-                                        <div className="info-grid">
-                                            <div className="info-item">
-                                                <label>版本号</label>
-                                                <span>{release.version}</span>
-                                            </div>
-                                            <div className="info-item">
-                                                <label>计划时间</label>
-                                                <span>{release.plannedDate ? new Date(release.plannedDate).toLocaleDateString() : '未设置'}</span>
-                                            </div>
-                                            <div className="info-item">
-                                                <label>当前阶段</label>
-                                                <span className="badge badge-primary">{STAGE_LABELS[release.stage]}</span>
-                                            </div>
-                                            <div className="info-item">
-                                                <label>创建人</label>
-                                                <span>{release.createdBy?.name}</span>
-                                            </div>
-                                        </div>
-                                        <div className="info-desc">
-                                            <label>发版描述</label>
-                                            <p>{release.description || '暂无描述'}</p>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* 实施/验证阶段显示所有填报内容 */}
-                                    {renderImplementationStageContent()}
-                                </div>
+                                <ReleaseInfo 
+                                    release={release} 
+                                    statusStyle={statusStyle} 
+                                    renderImplementationStageContent={renderImplementationStageContent} 
+                                />
                             )}
 
                             {/* 数据库变更内容标签页 */}
@@ -4677,38 +4644,11 @@ export default function ReleaseDetailPage({ params }) {
 
                             {/* 发版信息标签页 */}
                             {activeTab === 'info' && (
-                                <div className="tab-content">
-                                    <div className="card">
-                                        <div className="card-header">
-                                            <h3 className="card-title">📋 发版摘要</h3>
-                                        </div>
-                                        <div className="info-grid">
-                                            <div className="info-item">
-                                                <label>版本号</label>
-                                                <span>{release.version}</span>
-                                            </div>
-                                            <div className="info-item">
-                                                <label>计划时间</label>
-                                                <span>{release.plannedDate ? new Date(release.plannedDate).toLocaleDateString() : '未设置'}</span>
-                                            </div>
-                                            <div className="info-item">
-                                                <label>当前阶段</label>
-                                                <span className="badge badge-primary">{STAGE_LABELS[release.stage]}</span>
-                                            </div>
-                                            <div className="info-item">
-                                                <label>创建人</label>
-                                                <span>{release.createdBy?.name}</span>
-                                            </div>
-                                        </div>
-                                        <div className="info-desc">
-                                            <label>发版描述</label>
-                                            <p>{release.description || '暂无描述'}</p>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* 实施/验证阶段显示所有填报内容 */}
-                                    {renderImplementationStageContent()}
-                                </div>
+                                <ReleaseInfo 
+                                    release={release} 
+                                    statusStyle={statusStyle} 
+                                    renderImplementationStageContent={renderImplementationStageContent} 
+                                />
                             )}
 
                             {/* 备份与回滚标签页 */}
