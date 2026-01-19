@@ -41,7 +41,9 @@ export default function ReleaseCard({ release }) {
                 {/* 头部 */}
                 <div className="card-header">
                     <div className="card-title-section">
-                        <h3 className="card-title">{release.version}</h3>
+                        <h3 className="card-title">
+                            {release.projectName ? `${release.projectName} - ${release.version}` : release.version}
+                        </h3>
                         <span className="card-creator">
                             由 {release.createdBy?.name || '未知'} 创建
                         </span>

@@ -139,10 +139,10 @@ export default function Navbar() {
 
                     {/* 右侧操作区 */}
                     <div className="navbar-actions">
-                        {/* 反馈按钮 */}
+                        {/* 反馈按钮 - 仅桌面端显示 */}
                         {user && (
                             <button
-                                className="feedback-btn"
+                                className="feedback-btn desktop-only"
                                 onClick={() => setShowFeedbackModal(true)}
                                 title="意见反馈"
                             >
@@ -152,7 +152,7 @@ export default function Navbar() {
                         )}
                         
                         {user && (
-                            <div ref={userMenuRef} className="dropdown-wrapper">
+                            <div ref={userMenuRef} className="dropdown-wrapper desktop-only">
                                 <button 
                                     className="user-menu"
                                     onClick={() => setShowUserMenu(!showUserMenu)}
@@ -326,6 +326,18 @@ export default function Navbar() {
                                 </button>
                             </div>
                         </div>
+
+                        {/* 意见反馈按钮 */}
+                        <button 
+                            className="mobile-feedback-btn"
+                            onClick={() => {
+                                setShowMobileMenu(false);
+                                setShowFeedbackModal(true);
+                            }}
+                        >
+                            <FeedbackIcon />
+                            <span>意见反馈</span>
+                        </button>
 
                         {/* 退出按钮 */}
                         <button className="mobile-logout" onClick={handleLogout}>

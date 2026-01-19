@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { toast } from 'react-hot-toast';
 
 const FEEDBACK_TYPES = [
-    { value: 'bug', label: '🐛 Bug反馈', desc: '报告系统错误或异常' },
-    { value: 'feature', label: '✨ 功能建议', desc: '建议新增功能' },
-    { value: 'improvement', label: '🚀 改进建议', desc: '优化现有功能' },
-    { value: 'other', label: '💬 其他', desc: '其他意见或建议' }
+    { value: 'bug', label: 'Bug反馈', icon: '🐛', desc: '报告系统错误或异常', color: 'error' },
+    { value: 'feature', label: '功能建议', icon: '✨', desc: '建议新增功能', color: 'primary' },
+    { value: 'improvement', label: '改进建议', icon: '🚀', desc: '优化现有功能', color: 'success' },
+    { value: 'other', label: '其他反馈', icon: '💬', desc: '其他意见或建议', color: 'secondary' }
 ];
 
 export default function FeedbackModal({ isOpen, onClose }) {
@@ -58,75 +58,95 @@ export default function FeedbackModal({ isOpen, onClose }) {
 
     if (!isOpen) return null;
 
+    const selectedType = FEEDBACK_TYPES.find(t => t.value === formData.type);
+
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content feedback-modal" onClick={(e) => e.stopPropagation()}>
-                <div className="modal-header">
-                    <h2 className="modal-title">💡 意见反馈</h2>
-                    <button className="modal-close" onClick={onClose}>✕</button>
+            <div className="modal-content feedback-modal-v2" onClick={(e) => e.stopPropagation()}>
+                {/* 顶部标题栏 */}
+                <div className="feedback-header">
+                    <div className="feedback-header-content">
+                        <div className="feedback-icon-wrapper">
+                            <span className="feedback-main-icon">💡</span>
+                        </div>
+                        <div className="feedback-header-text">
+                            <h2 className="feedback-title">意见反馈</h2>
+                            <p className="feedback-subtitle">您的反馈对我们非常重要</p>
+                        </div>
+                    </div>
+                    <button className="feedback-close-btn" onClick={onClose} aria-label="关闭">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                    </button>
                 </div>
 
-                <form onSubmit={handleSubmit}>
-                    <div className="modal-body">
-                        <p className="feedback-intro">
-                            您的反馈对我们非常重要！请告诉我们您的想法和建议。
-                        </p>
-
-                        {/* 反馈类型 */}
-                        <div className="form-group">
-                            <label className="form-label">反馈类型</label>
-                            <div className="feedback-type-grid">
+                <form onSubmit={handleSubmit} className="feedback-form">
+                    <div className="feedback-body">
+                        {/* 反馈类型选择 */}
+                        <div className="feedback-section">
+                            <label className="feedback-label">选择反馈类型</label>
+                            <div className="feedback-types">
                                 {FEEDBACK_TYPES.map(type => (
-                                    <div
+                                    <button
                                         key={type.value}
-                                        className={`feedback-type-card ${formData.type === type.value ? 'active' : ''}`}
+                                        type="button"
+                                        className={`feedback-type-btn ${formData.type === type.value ? 'active' : ''} feedback-type-${type.color}`}
                                         onClick={() => setFormData({ ...formData, type: type.value })}
                                     >
-                                        <div className="feedback-type-label">{type.label}</div>
-                                        <div className="feedback-type-desc">{type.desc}</div>
-                                    </div>
+                                        <span className="feedback-type-icon">{type.icon}</span>
+                                        <div className="feedback-type-content">
+                                            <span className="feedback-type-name">{type.label}</span>
+                                            <span className="feedback-type-hint">{type.desc}</span>
+                                        </div>
+                                        <span className="feedback-type-check">
+                                            {formData.type === type.value && '✓'}
+                                        </span>
+                                    </button>
                                 ))}
                             </div>
                         </div>
 
                         {/* 反馈标题 */}
-                        <div className="form-group">
-                            <label className="form-label">
-                                标题 <span className="required">*</span>
+                        <div className="feedback-section">
+                            <label className="feedback-label">
+                                反馈标题 <span className="feedback-required">*</span>
                             </label>
                             <input
                                 type="text"
-                                className="form-input"
-                                placeholder="简要描述您的反馈..."
+                                className="feedback-input"
+                                placeholder="用一句话概括您的反馈..."
                                 value={formData.title}
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                                 required
+                                maxLength={100}
                             />
+                            <div className="feedback-char-count">{formData.title.length}/100</div>
                         </div>
 
                         {/* 反馈内容 */}
-                        <div className="form-group">
-                            <label className="form-label">
-                                详细描述 <span className="required">*</span>
+                        <div className="feedback-section">
+                            <label className="feedback-label">
+                                详细描述 <span className="feedback-required">*</span>
                             </label>
                             <textarea
-                                className="form-input"
-                                placeholder="请详细描述您的问题或建议..."
+                                className="feedback-textarea"
+                                placeholder={`请详细描述您的${selectedType?.label}...\n\n${selectedType?.value === 'bug' ? '建议包含：\n• 问题出现的页面或功能\n• 具体的操作步骤\n• 预期结果和实际结果' : '建议包含：\n• 具体的使用场景\n• 期望的功能或改进\n• 对您工作的帮助'}`}
                                 value={formData.content}
                                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                                 required
-                                rows={6}
+                                rows={8}
+                                maxLength={1000}
                             />
-                            <span className="form-hint">
-                                提示：如果是Bug反馈，请说明复现步骤；如果是功能建议，请说明使用场景
-                            </span>
+                            <div className="feedback-char-count">{formData.content.length}/1000</div>
                         </div>
                     </div>
 
-                    <div className="modal-footer">
+                    {/* 底部按钮 */}
+                    <div className="feedback-footer">
                         <button
                             type="button"
-                            className="btn btn-secondary"
+                            className="feedback-btn feedback-btn-cancel"
                             onClick={onClose}
                             disabled={loading}
                         >
@@ -134,10 +154,20 @@ export default function FeedbackModal({ isOpen, onClose }) {
                         </button>
                         <button
                             type="submit"
-                            className="btn btn-primary"
+                            className="feedback-btn feedback-btn-submit"
                             disabled={loading}
                         >
-                            {loading ? '提交中...' : '提交反馈'}
+                            {loading ? (
+                                <>
+                                    <span className="feedback-loading-spinner"></span>
+                                    提交中...
+                                </>
+                            ) : (
+                                <>
+                                    <span>✓</span>
+                                    提交反馈
+                                </>
+                            )}
                         </button>
                     </div>
                 </form>
