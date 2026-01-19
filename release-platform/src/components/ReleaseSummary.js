@@ -88,7 +88,7 @@ export default function ReleaseSummary({ release, checklists }) {
                 ['基本信息'],
                 ['版本号', release.version],
                 ['发版描述', release.description],
-                ['所属平台', release.platform || '门户'],
+                ['项目名称', release.projectName || '-'],
                 ['计划时间', release.plannedDate ? new Date(release.plannedDate).toLocaleDateString('zh-CN') : '未设置'],
                 ['创建人', release.createdBy?.name],
                 ['创建时间', new Date(release.createdAt).toLocaleString('zh-CN')],
@@ -538,8 +538,8 @@ export default function ReleaseSummary({ release, checklists }) {
                         <span className="text-glow">{release.version}</span>
                     </div>
                     <div className="info-item-summary">
-                        <label>所属平台</label>
-                        <span>{release.platform || '门户'}</span>
+                        <label>项目名称</label>
+                        <span>{release.projectName || '-'}</span>
                     </div>
                     <div className="info-item-summary">
                         <label>计划时间</label>

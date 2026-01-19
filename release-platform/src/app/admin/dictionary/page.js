@@ -8,9 +8,10 @@ import ConfirmModal from '@/components/ConfirmModal';
 
 // 字典类型定义
 const DICT_TYPES = [
-    { code: 'platform', name: '发版平台', desc: '发版申请时可选的平台', icon: '🌐' },
     { code: 'system', name: '所属系统', desc: '开发人员填报变更时选择的系统', icon: '💻' },
     { code: 'status', name: '发版状态', desc: '发版记录的状态选项', icon: '📊' },
+    { code: 'releaseType', name: '发版类型', desc: '发版申请时的类型选项', icon: '🚀' },
+    { code: 'impactScope', name: '影响范围', desc: '发版影响范围选项', icon: '🎯' },
     { code: 'docType', name: '文档类型', desc: '上传文档时的类型选项', icon: '📄' },
     { code: 'dbChangeType', name: '数据库变更类型', desc: '数据库变更的类型选项', icon: '🗄️' },
 ];
@@ -19,7 +20,7 @@ export default function DictionaryPage() {
     const router = useRouter();
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [activeType, setActiveType] = useState('platform');
+    const [activeType, setActiveType] = useState('system');
     const [showAddModal, setShowAddModal] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [form, setForm] = useState({ code: '', name: '', sortOrder: 0 });

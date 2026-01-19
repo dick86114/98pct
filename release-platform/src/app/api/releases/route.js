@@ -75,7 +75,7 @@ export async function POST(request) {
 
         const data = await request.json();
         // 支持新格式 members: [{ userId, role }] 和旧格式 memberIds: [userId]
-        const { version, description, plannedDate, members, memberIds } = data;
+        const { projectName, version, description, plannedDate, releaseType, impactScope, downtime, members, memberIds } = data;
         
         // 兼容处理：如果是旧格式 memberIds，转换为新格式
         let memberList = members || [];
@@ -95,9 +95,9 @@ export async function POST(request) {
         }
 
         // 验证基本字段
-        if (!version || !description) {
+        if (!projectName || !version || !description) {
             return NextResponse.json(
-                { error: '版本号和描述为必填项' },
+                { error: '项目名称、版本号和描述为必填项' },
                 { status: 400 }
             );
         }
@@ -140,9 +140,13 @@ export async function POST(request) {
         // 创建发版记录
         const release = await prisma.release.create({
             data: {
+                projectName,
                 version,
                 description,
                 plannedDate: parsedDate,
+                releaseType: releaseType || null,
+                impactScope: impactScope || null,
+                downtime: downtime ? parseInt(downtime) : null,
                 createdById: decoded.userId,
                 stage: 'PREPARATION',
                 status: 'DRAFT',

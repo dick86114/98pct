@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import DatePicker from '@/components/DatePicker';
+import CustomSelect from '@/components/CustomSelect';
+import useDictionary from '@/hooks/useDictionary';
 import toast from 'react-hot-toast';
 
 // 角色标签映射
@@ -25,12 +27,20 @@ export default function NewReleasePage() {
     const [allUsers, setAllUsers] = useState([]);
     // selectedMembers 改为对象数组: [{ userId: number, role: string }]
     const [selectedMembers, setSelectedMembers] = useState([]);
+    
+    // 从字典获取发版类型和影响范围
+    const { items: releaseTypes } = useDictionary('releaseType');
+    const { items: impactScopes } = useDictionary('impactScope');
 
     // 表单数据
     const [formData, setFormData] = useState({
+        projectName: '',
         version: '',
         description: '',
         plannedDate: new Date().toISOString().split('T')[0],
+        releaseType: '',
+        impactScope: '',
+        downtime: '',
     });
 
     useEffect(() => {
@@ -169,6 +179,21 @@ export default function NewReleasePage() {
                                 </h3>
                             </div>
 
+                            <div className="form-group">
+                                <label className="form-label">
+                                    项目名称 <span className="required">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    placeholder="如: 用户中心、订单系统等"
+                                    value={formData.projectName}
+                                    onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
+                                    required
+                                />
+                                <span className="form-hint">请输入本次发版所属的项目名称</span>
+                            </div>
+
                             <div className="form-grid">
                                 <div className="form-group">
                                     <label className="form-label">
@@ -192,6 +217,40 @@ export default function NewReleasePage() {
                                         placeholder="选择计划日期"
                                     />
                                 </div>
+                            </div>
+
+                            <div className="form-grid">
+                                <div className="form-group">
+                                    <label className="form-label">发版类型</label>
+                                    <CustomSelect
+                                        value={formData.releaseType}
+                                        onChange={value => setFormData({ ...formData, releaseType: value })}
+                                        options={releaseTypes.map(t => ({ value: t.name, label: t.name }))}
+                                        placeholder="选择发版类型"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">影响范围</label>
+                                    <CustomSelect
+                                        value={formData.impactScope}
+                                        onChange={value => setFormData({ ...formData, impactScope: value })}
+                                        options={impactScopes.map(s => ({ value: s.name, label: s.name }))}
+                                        placeholder="选择影响范围"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label className="form-label">预计停服时长（分钟）</label>
+                                <input
+                                    type="number"
+                                    className="form-input"
+                                    placeholder="如: 30"
+                                    value={formData.downtime}
+                                    onChange={(e) => setFormData({ ...formData, downtime: e.target.value })}
+                                    min="0"
+                                />
+                                <span className="form-hint">预计停服时长，单位：分钟</span>
                             </div>
 
                             <div className="form-group">
