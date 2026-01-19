@@ -282,7 +282,32 @@ export default function Navbar() {
                         {/* 主题切换 */}
                         <div className="mobile-theme">
                             <span className="mobile-divider">主题设置</span>
-                            <ThemeSwitcher />
+                            <div className="mobile-theme-options">
+                                <button 
+                                    className={`mobile-theme-btn ${themeMode === 'light' ? 'active' : ''}`}
+                                    onClick={() => setTheme('light')}
+                                >
+                                    <SunIcon />
+                                    <span>浅色</span>
+                                    {themeMode === 'light' && <CheckIcon />}
+                                </button>
+                                <button 
+                                    className={`mobile-theme-btn ${themeMode === 'dark' ? 'active' : ''}`}
+                                    onClick={() => setTheme('dark')}
+                                >
+                                    <MoonIcon />
+                                    <span>深色</span>
+                                    {themeMode === 'dark' && <CheckIcon />}
+                                </button>
+                                <button 
+                                    className={`mobile-theme-btn ${themeMode === 'system' ? 'active' : ''}`}
+                                    onClick={() => setTheme('system')}
+                                >
+                                    <SystemIcon />
+                                    <span>跟随系统</span>
+                                    {themeMode === 'system' && <CheckIcon />}
+                                </button>
+                            </div>
                         </div>
 
                         {/* 退出按钮 */}
