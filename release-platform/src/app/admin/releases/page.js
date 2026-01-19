@@ -206,14 +206,6 @@ export default function AdminReleasesPage() {
                                 </p>
                             </div>
                         </div>
-                        <div className="page-header-actions">
-                            <button
-                                className="btn btn-primary"
-                                onClick={() => router.push('/releases/new')}
-                            >
-                                ➕ 新建发版
-                            </button>
-                        </div>
                     </div>
 
                     {/* 发版列表 */}
@@ -238,7 +230,7 @@ export default function AdminReleasesPage() {
                                             <div className="empty-state">
                                                 <div className="empty-icon">📋</div>
                                                 <h3>暂无发版记录</h3>
-                                                <p>点击"新建发版"创建第一个发版</p>
+                                                <p>等待项目经理创建发版记录</p>
                                             </div>
                                         </td>
                                     </tr>

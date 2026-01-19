@@ -318,7 +318,7 @@ export default function UsersPage() {
                                         <th>手机号</th>
                                         <th>角色</th>
                                         <th>邮箱</th>
-                                        <th className="text-right">操作</th>
+                                        <th>操作</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -353,7 +353,7 @@ export default function UsersPage() {
                                             <td>
                                                 <span className="text-muted">{user.email || '-'}</span>
                                             </td>
-                                            <td className="text-right">
+                                            <td>
                                                 <div className="action-buttons">
                                                     <button
                                                         className="btn btn-sm btn-ghost"
