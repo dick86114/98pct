@@ -1,5 +1,5 @@
 /**
- * 九成八发版管理平台 - 基础测试
+ * 今天发什么发版管理平台 - 基础测试
  * 测试基本页面加载和 UI 元素
  */
 
@@ -10,7 +10,7 @@ test.describe('发版管理平台 - 基础测试', () => {
     await page.goto('/');
 
     // 检查页面标题
-    await expect(page).toHaveTitle(/发版管理平台|九成八/);
+    await expect(page).toHaveTitle(/发版管理平台|今天发什么/);
 
     // 检查是否重定向到登录页面或仪表盘
     const url = page.url();
@@ -28,7 +28,7 @@ test.describe('发版管理平台 - 基础测试', () => {
     
     // 检查 Logo
     await expect(page.locator('.logo-img')).toBeVisible();
-    await expect(page.locator('.logo-title')).toContainText('九成八');
+    await expect(page.locator('.logo-title')).toContainText('今天发什么');
   });
 
   test('导航栏测试（需要登录）', async ({ page }) => {

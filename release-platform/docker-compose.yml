@@ -1,4 +1,4 @@
-# 九成八发版管理平台 Docker Compose 配置
+# 今天发什么发版管理平台 Docker Compose 配置
 services:
   98pct:
     # 使用 Docker Hub 镜像（推荐，国内访问更快）

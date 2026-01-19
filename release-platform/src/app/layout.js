@@ -3,7 +3,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import './globals.css';
 
 export const metadata = {
-    title: '九成八 | 发版管理平台',
+    title: '今天发什么 | 发版管理平台',
     description: '企业级软件发版流程管理系统，支持多角色协作、三阶段流程控制、检查清单确认',
     icons: {
         icon: [

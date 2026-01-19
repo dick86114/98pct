@@ -1,4 +1,4 @@
-# 九成八发版管理平台 - Docker 镜像自动构建与发布
+# 今天发什么发版管理平台 - Docker 镜像自动构建与发布
 name: Build and Publish Docker Image
 
 on:

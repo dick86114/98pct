@@ -81,8 +81,8 @@ export default function LoginPage() {
                 {/* Logo 区域 */}
                 <div className="logo-section">
                     <div className="logo-glow" />
-                    <img src="/logo.png" alt="九成八" className="logo-img" />
-                    <h1 className="logo-title">九成八</h1>
+                    <img src="/logo.png" alt="今天发什么" className="logo-img" />
+                    <h1 className="logo-title">今天发什么</h1>
                     <p className="logo-subtitle">发版管理平台</p>
                 </div>
 

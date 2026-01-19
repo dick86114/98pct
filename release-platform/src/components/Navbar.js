@@ -83,11 +83,11 @@ export default function Navbar() {
                             <div className="brand-logo-glow"></div>
                             <div className="brand-logo-ring"></div>
                             <div className="brand-logo">
-                                <img src="/logo.png" alt="九成八" />
+                                <img src="/logo.png" alt="今天发什么" />
                             </div>
                         </div>
                         <div className="brand-text-wrapper">
-                            <span className="brand-text">九成八</span>
+                            <span className="brand-text">今天发什么</span>
                             <span className="brand-subtitle">发版管理平台</span>
                         </div>
                     </Link>
