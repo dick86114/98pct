@@ -176,6 +176,9 @@ export default function DictionaryPage() {
     };
 
     const executeDelete = async (itemId) => {
+        // 先关闭确认弹窗
+        setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+        
         const token = localStorage.getItem('token');
         try {
             const res = await fetch(`/api/dictionary/${itemId}`, {

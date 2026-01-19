@@ -151,6 +151,9 @@ export default function UsersPage() {
     };
 
     const executeDelete = async (userId) => {
+        // 先关闭确认弹窗
+        setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+        
         const token = localStorage.getItem('token');
         try {
             const res = await fetch(`/api/users/${userId}`, {
@@ -164,10 +167,8 @@ export default function UsersPage() {
             }
 
             setUsers(users.filter(u => u.id !== userId));
-            setConfirmConfig(prev => ({ ...prev, isOpen: false }));
             toast.success('删除成功');
         } catch (error) {
-            setConfirmConfig(prev => ({ ...prev, isOpen: false }));
             toast.error(error.message);
         }
     };

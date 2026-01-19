@@ -99,35 +99,47 @@ async function main() {
         console.log('密码: admin123');
     }
 
-    // 3. 初始化数据字典（智能判断）
-    // 检查字典表是否有数据
-    const existingDictCount = await prisma.dictionary.count();
+    // 3. 初始化数据字典（使用 upsert 确保数据完整）
+    console.log('开始初始化数据字典...');
+    let successCount = 0;
+    let updateCount = 0;
     
-    if (existingDictCount > 0) {
-        console.log(`数据字典已存在 ${existingDictCount} 条记录,保持现状`);
-    } else {
-        console.log('开始初始化数据字典...');
-        let successCount = 0;
-        let skipCount = 0;
-        
-        for (const item of dictionaryData) {
-            try {
-                await prisma.dictionary.create({
-                    data: item,
-                });
-                successCount++;
-            } catch (error) {
-                // 如果是唯一约束冲突,说明数据已存在,跳过
-                if (error.code === 'P2002') {
-                    skipCount++;
-                } else {
-                    console.error(`初始化字典失败 ${item.type}/${item.code}:`, error.message);
+    for (const item of dictionaryData) {
+        try {
+            const result = await prisma.dictionary.upsert({
+                where: {
+                    type_code: {
+                        type: item.type,
+                        code: item.code,
+                    }
+                },
+                update: {
+                    name: item.name,
+                    sortOrder: item.sortOrder,
+                },
+                create: item,
+            });
+            
+            // 判断是新增还是更新
+            const existing = await prisma.dictionary.findFirst({
+                where: {
+                    type: item.type,
+                    code: item.code,
+                    createdAt: result.createdAt
                 }
+            });
+            
+            if (existing && existing.createdAt.getTime() === result.updatedAt.getTime()) {
+                successCount++;
+            } else {
+                updateCount++;
             }
+        } catch (error) {
+            console.error(`初始化字典失败 ${item.type}/${item.code}:`, error.message);
         }
-        
-        console.log(`数据字典初始化完成: 新增 ${successCount} 条, 跳过 ${skipCount} 条`);
     }
+    
+    console.log(`数据字典初始化完成: 新增 ${successCount} 条, 更新 ${updateCount} 条`);
 }
 
 main()

@@ -139,6 +139,9 @@ export default function AdminReleasesPage() {
     };
 
     const executeDelete = async (releaseId) => {
+        // 先关闭确认弹窗
+        setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+        
         const token = localStorage.getItem('token');
         try {
             const res = await fetch(`/api/releases/${releaseId}`, {
