@@ -4,15 +4,16 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import ReleaseCard from '@/components/ReleaseCard';
+import useDictionary from '@/hooks/useDictionary';
 
-const STATUS_OPTIONS = [
-    { value: '', label: '全部状态', icon: '📊' },
-    { value: 'DRAFT', label: '草稿', icon: '📝' },
-    { value: 'PENDING_REVIEW', label: '待评审', icon: '⏳' },
-    { value: 'IN_PROGRESS', label: '进行中', icon: '🔄' },
-    { value: 'SUCCESS', label: '成功', icon: '✅' },
-    { value: 'FAILED', label: '失败', icon: '❌' },
-];
+// 状态图标映射
+const STATUS_ICONS = {
+    DRAFT: '📝',
+    PENDING_REVIEW: '⏳',
+    IN_PROGRESS: '🔄',
+    SUCCESS: '✅',
+    FAILED: '❌',
+};
 
 const STAGE_OPTIONS = [
     { value: '', label: '全部阶段', icon: '📋' },
@@ -33,6 +34,9 @@ export default function ReleasesPage() {
         status: '',
         stage: '',
     });
+    
+    // 从数据字典获取状态选项
+    const { items: statusItems } = useDictionary('status');
 
     useEffect(() => {
         setMounted(true);
@@ -84,6 +88,16 @@ export default function ReleasesPage() {
 
     const isPM = user?.role?.split(',').includes('PM');
     const hasFilters = filters.status || filters.stage;
+    
+    // 构建状态选项（从数据字典）
+    const statusOptions = [
+        { value: '', label: '全部状态', icon: '📊' },
+        ...statusItems.map(item => ({
+            value: item.code,
+            label: item.name,
+            icon: STATUS_ICONS[item.code] || '📄'
+        }))
+    ];
 
     if (loading) {
         return (
@@ -138,7 +152,7 @@ export default function ReleasesPage() {
                                     状态筛选
                                 </label>
                                 <div className="filter-chips">
-                                    {STATUS_OPTIONS.map((opt) => (
+                                    {statusOptions.map((opt) => (
                                         <button
                                             key={opt.value}
                                             className={`filter-chip ${filters.status === opt.value ? 'active' : ''}`}

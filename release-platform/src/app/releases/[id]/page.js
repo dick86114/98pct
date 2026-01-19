@@ -15,14 +15,6 @@ import { toast } from 'react-hot-toast';
 import { STAGES, STAGE_LABELS, getAllChecklists, PREPARATION_CHECKLIST } from '@/lib/constants';
 import useDictionary from '@/hooks/useDictionary';
 
-const STATUS_STYLES = {
-    DRAFT: { label: '草稿', class: 'badge-secondary' },
-    PENDING_REVIEW: { label: '待评审', class: 'badge-warning' },
-    IN_PROGRESS: { label: '进行中', class: 'badge-info' },
-    SUCCESS: { label: '发版成功', class: 'badge-success' },
-    FAILED: { label: '发版失败', class: 'badge-danger' },
-};
-
 // 根据文件名获取对应的图标
 const getFileIcon = (filename) => {
     if (!filename) return '📄';
@@ -1509,7 +1501,22 @@ export default function ReleaseDetailPage({ params }) {
     if (loading) return <div className="loading"><div className="loading-spinner"></div></div>;
     if (!release) return null;
 
-    const statusStyle = STATUS_STYLES[release.status] || STATUS_STYLES.DRAFT;
+    // 从数据字典获取状态名称
+    const { getLabel: getStatusLabel } = useDictionary('status');
+    const statusLabel = getStatusLabel(release.status);
+    
+    // 状态样式类映射
+    const statusClassMap = {
+        DRAFT: 'badge-secondary',
+        PENDING_REVIEW: 'badge-warning',
+        IN_PROGRESS: 'badge-info',
+        SUCCESS: 'badge-success',
+        FAILED: 'badge-danger',
+    };
+    const statusStyle = { 
+        label: statusLabel, 
+        class: statusClassMap[release.status] || 'badge-secondary' 
+    };
     const isFinished = release.stage === 'COMPLETED' || release.stage === 'ROLLBACK';
 
     // 权限判断

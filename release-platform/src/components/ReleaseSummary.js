@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+import useDictionary from '@/hooks/useDictionary';
 
 // 角色标签映射
 const ROLE_LABELS = {
@@ -23,15 +24,6 @@ const STAGE_LABELS = {
     VERIFICATION: '验证阶段',
     COMPLETED: '已完成',
     ROLLBACK: '已回滚'
-};
-
-// 状态标签映射
-const STATUS_LABELS = {
-    DRAFT: '草稿',
-    PENDING_REVIEW: '待评审',
-    IN_PROGRESS: '进行中',
-    SUCCESS: '发版成功',
-    FAILED: '发版失败'
 };
 
 // 文档类型标签
@@ -63,6 +55,9 @@ const getFileIcon = (filename) => {
 export default function ReleaseSummary({ release, checklists }) {
     const [exporting, setExporting] = useState(false);
     const [downloading, setDownloading] = useState(false);
+    
+    // 从数据字典获取状态名称
+    const { getLabel: getStatusLabel } = useDictionary('status');
 
     // 计算统计数据
     const stats = {
@@ -98,7 +93,7 @@ export default function ReleaseSummary({ release, checklists }) {
                 ['创建人', release.createdBy?.name],
                 ['创建时间', new Date(release.createdAt).toLocaleString('zh-CN')],
                 ['完成时间', new Date(release.updatedAt).toLocaleString('zh-CN')],
-                ['当前状态', STATUS_LABELS[release.status] || release.status],
+                ['当前状态', getStatusLabel(release.status)],
                 ['当前阶段', STAGE_LABELS[release.stage] || release.stage],
                 [],
                 ['统计信息'],

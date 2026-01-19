@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import useDictionary from '@/hooks/useDictionary';
 
 const STAGE_CONFIG = {
     PREPARATION: { label: '准备阶段', icon: '📋', color: 'var(--info)' },
@@ -10,16 +11,23 @@ const STAGE_CONFIG = {
     ROLLBACK: { label: '已回滚', icon: '↩️', color: 'var(--error)' },
 };
 
-const STATUS_CONFIG = {
-    DRAFT: { label: '草稿', class: 'status-draft' },
-    PENDING_REVIEW: { label: '待评审', class: 'status-pending' },
-    IN_PROGRESS: { label: '进行中', class: 'status-progress' },
-    SUCCESS: { label: '发版成功', class: 'status-success' },
-    FAILED: { label: '发版失败', class: 'status-failed' },
+// 状态样式类映射
+const STATUS_CLASS_MAP = {
+    DRAFT: 'status-draft',
+    PENDING_REVIEW: 'status-pending',
+    IN_PROGRESS: 'status-progress',
+    SUCCESS: 'status-success',
+    FAILED: 'status-failed',
 };
 
 export default function ReleaseCard({ release }) {
-    const status = STATUS_CONFIG[release.status] || STATUS_CONFIG.DRAFT;
+    // 从数据字典获取状态名称
+    const { getLabel: getStatusLabel } = useDictionary('status');
+    
+    const statusLabel = getStatusLabel(release.status);
+    const statusClass = STATUS_CLASS_MAP[release.status] || 'status-draft';
+    const status = { label: statusLabel, class: statusClass };
+    
     const stage = STAGE_CONFIG[release.stage] || STAGE_CONFIG.PREPARATION;
     const isCompleted = release.stage === 'COMPLETED';
     const isFailed = release.stage === 'ROLLBACK';

@@ -6,6 +6,7 @@ import Navbar from '@/components/Navbar';
 import DatePicker from '@/components/DatePicker';
 import toast from 'react-hot-toast';
 import ConfirmModal from '@/components/ConfirmModal';
+import useDictionary from '@/hooks/useDictionary';
 
 const STAGE_LABELS = {
     PREPARATION: '准备阶段',
@@ -13,14 +14,6 @@ const STAGE_LABELS = {
     VERIFICATION: '验证阶段',
     COMPLETED: '已完成',
     ROLLBACK: '已回滚',
-};
-
-const STATUS_LABELS = {
-    DRAFT: '草稿',
-    PENDING_REVIEW: '待评审',
-    IN_PROGRESS: '进行中',
-    SUCCESS: '发版成功',
-    FAILED: '发版失败',
 };
 
 export default function AdminReleasesPage() {
@@ -49,6 +42,9 @@ export default function AdminReleasesPage() {
     const [filterStage, setFilterStage] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
     const [searchText, setSearchText] = useState('');
+    
+    // 从数据字典获取状态选项
+    const { items: statusItems, getLabel: getStatusLabel } = useDictionary('status');
 
     useEffect(() => {
         checkPermission();
@@ -329,8 +325,8 @@ export default function AdminReleasesPage() {
                                 onChange={(e) => setFilterStatus(e.target.value)}
                             >
                                 <option value="">全部状态</option>
-                                {Object.entries(STATUS_LABELS).map(([key, label]) => (
-                                    <option key={key} value={key}>{label}</option>
+                                {statusItems.map(item => (
+                                    <option key={item.code} value={item.code}>{item.name}</option>
                                 ))}
                             </select>
                         </div>
@@ -407,7 +403,7 @@ export default function AdminReleasesPage() {
                                             </td>
                                             <td>
                                                 <span className={`badge ${getStatusBadgeClass(release.status)}`}>
-                                                    {STATUS_LABELS[release.status]}
+                                                    {getStatusLabel(release.status)}
                                                 </span>
                                             </td>
                                             <td>
