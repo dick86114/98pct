@@ -21,6 +21,7 @@ model User {
   documents           Document[]
   releases            Release[]
   releaseMembers      ReleaseMember[]
+  feedbacks           Feedback[]      // 用户提交的反馈
 }
 
 model Release {
@@ -168,3 +169,18 @@ model Dictionary {
 
   @@unique([type, code])
 }
+
+// 意见反馈表
+model Feedback {
+  id          Int      @id @default(autoincrement())
+  userId      Int      // 提交反馈的用户
+  type        String   // 反馈类型：bug, feature, improvement, other
+  title       String   // 反馈标题
+  content     String   // 反馈内容
+  status      String   @default("pending") // 状态：pending, processing, resolved, rejected
+  adminReply  String?  // 管理员回复
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
+}
+

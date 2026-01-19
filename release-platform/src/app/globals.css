@@ -3050,7 +3050,8 @@ main {
 .action-buttons {
   display: flex;
   gap: 8px;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  align-items: center;
 }
 
 .btn-ghost {
@@ -3138,7 +3139,7 @@ main {
   display: block;
   margin-top: 6px;
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 /* 必填标记 */
@@ -12088,5 +12089,361 @@ main {
 
   .tree-member-meta {
     font-size: 11px;
+  }
+}
+
+/* ==================== 意见反馈样式 ==================== */
+
+/* 反馈按钮 */
+.feedback-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--glass-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-sans);
+}
+
+.feedback-btn:hover {
+  background: var(--primary-subtle);
+  border-color: var(--primary);
+  color: var(--primary-light);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--primary-glow);
+}
+
+.feedback-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.feedback-text {
+  font-size: 14px;
+}
+
+/* 反馈弹窗 - 全新设计 */
+.feedback-modal {
+  max-width: 650px;
+  width: 90%;
+  background: #ffffff;
+  border: none;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+/* 深色主题下的弹窗背景 */
+[data-theme="dark"] .feedback-modal {
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.feedback-modal .modal-header {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: white;
+  padding: 20px 24px;
+  border-radius: 20px 20px 0 0;
+}
+
+.feedback-modal .modal-title {
+  color: white;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.feedback-modal .modal-close {
+  color: white;
+  opacity: 0.9;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.feedback-modal .modal-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  opacity: 1;
+}
+
+.feedback-modal .modal-body {
+  padding: 28px 24px;
+  background: #ffffff;
+}
+
+[data-theme="dark"] .feedback-modal .modal-body {
+  background: #1e293b;
+}
+
+.feedback-intro {
+  font-size: 14px;
+  color: #475569;
+  margin-bottom: 24px;
+  padding: 14px 18px;
+  background: #f0f9ff;
+  border-left: 4px solid #0ea5e9;
+  border-radius: 8px;
+  line-height: 1.6;
+}
+
+[data-theme="dark"] .feedback-intro {
+  color: #cbd5e1;
+  background: rgba(14, 165, 233, 0.1);
+}
+
+/* 反馈类型网格 - 重新设计 */
+.feedback-type-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.feedback-type-card {
+  padding: 16px;
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+[data-theme="dark"] .feedback-type-card {
+  background: #334155;
+  border-color: #475569;
+}
+
+.feedback-type-card:hover {
+  border-color: #0ea5e9;
+  background: #f0f9ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
+}
+
+[data-theme="dark"] .feedback-type-card:hover {
+  background: rgba(14, 165, 233, 0.15);
+  border-color: #0ea5e9;
+}
+
+.feedback-type-card.active {
+  border-color: #0ea5e9;
+  background: #0ea5e9;
+  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.3);
+}
+
+.feedback-type-card.active .feedback-type-label,
+.feedback-type-card.active .feedback-type-desc {
+  color: white;
+}
+
+.feedback-type-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 6px;
+  display: block;
+}
+
+[data-theme="dark"] .feedback-type-label {
+  color: #f8fafc;
+}
+
+.feedback-type-desc {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+[data-theme="dark"] .feedback-type-desc {
+  color: #94a3b8;
+}
+
+/* 表单标签增强 */
+.feedback-modal .form-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 10px;
+}
+
+[data-theme="dark"] .feedback-modal .form-label {
+  color: #f8fafc;
+}
+
+.feedback-modal .required {
+  color: #ef4444;
+}
+
+/* 表单输入框增强 */
+.feedback-modal .form-input {
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  color: #0f172a;
+  font-size: 14px;
+  padding: 12px 16px;
+}
+
+[data-theme="dark"] .feedback-modal .form-input {
+  background: #334155;
+  border-color: #475569;
+  color: #f8fafc;
+}
+
+.feedback-modal .form-input:focus {
+  border-color: #0ea5e9;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+}
+
+[data-theme="dark"] .feedback-modal .form-input:focus {
+  background: #1e293b;
+  border-color: #0ea5e9;
+}
+
+.feedback-modal .form-input::placeholder {
+  color: #94a3b8;
+}
+
+.feedback-modal .form-hint {
+  color: #64748b;
+  font-size: 13px;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+[data-theme="dark"] .feedback-modal .form-hint {
+  color: #94a3b8;
+}
+
+/* 弹窗底部 */
+.feedback-modal .modal-footer {
+  padding: 20px 24px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  border-radius: 0 0 20px 20px;
+}
+
+[data-theme="dark"] .feedback-modal .modal-footer {
+  background: #0f172a;
+  border-top-color: #334155;
+}
+
+/* 反馈详情页面 */
+.feedback-detail-modal {
+  max-width: 700px;
+  width: 90%;
+  background: #ffffff;
+}
+
+[data-theme="dark"] .feedback-detail-modal {
+  background: #1e293b;
+}
+
+.feedback-detail-section {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+[data-theme="dark"] .feedback-detail-section {
+  border-bottom-color: #334155;
+}
+
+.feedback-detail-section:last-of-type {
+  border-bottom: none;
+}
+
+.feedback-detail-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+[data-theme="dark"] .feedback-detail-label {
+  color: #94a3b8;
+}
+
+.feedback-detail-value {
+  font-size: 15px;
+  color: #0f172a;
+  font-weight: 500;
+}
+
+[data-theme="dark"] .feedback-detail-value {
+  color: #f8fafc;
+}
+
+.feedback-detail-content {
+  font-size: 14px;
+  color: #0f172a;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  border-left: 4px solid #0ea5e9;
+}
+
+[data-theme="dark"] .feedback-detail-content {
+  color: #f8fafc;
+  background: #334155;
+}
+
+.feedback-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  background: #0ea5e9;
+  color: white;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.feedback-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+[data-theme="dark"] .feedback-title {
+  color: #f8fafc;
+}
+
+.feedback-status-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 响应式 */
+@media (max-width: 640px) {
+  .feedback-type-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .feedback-text {
+    display: none;
+  }
+
+  .feedback-btn {
+    padding: 8px 10px;
+  }
+
+  .feedback-status-actions {
+    width: 100%;
+  }
+
+  .feedback-status-actions .btn {
+    flex: 1;
   }
 }

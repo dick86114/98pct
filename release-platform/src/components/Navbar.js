@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import useRoles from '@/hooks/useRoles';
 import { useTheme } from '@/contexts/ThemeContext';
+import FeedbackModal from '@/components/FeedbackModal';
 
 export default function Navbar() {
     const pathname = usePathname();
@@ -15,6 +16,7 @@ export default function Navbar() {
     const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [showAdminMenu, setShowAdminMenu] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
+    const [showFeedbackModal, setShowFeedbackModal] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const adminMenuRef = useRef(null);
     const userMenuRef = useRef(null);
@@ -68,6 +70,7 @@ export default function Navbar() {
         { href: '/users', label: '用户管理', icon: UsersIcon },
         { href: '/admin/releases', label: '发版记录', icon: ListIcon },
         { href: '/admin/dictionary', label: '数据字典', icon: DatabaseIcon },
+        { href: '/admin/feedback', label: '意见反馈', icon: FeedbackIcon },
     ] : [];
 
     return (
@@ -136,6 +139,18 @@ export default function Navbar() {
 
                     {/* 右侧操作区 */}
                     <div className="navbar-actions">
+                        {/* 反馈按钮 */}
+                        {user && (
+                            <button
+                                className="feedback-btn"
+                                onClick={() => setShowFeedbackModal(true)}
+                                title="意见反馈"
+                            >
+                                <FeedbackIcon />
+                                <span className="feedback-text">反馈</span>
+                            </button>
+                        )}
+                        
                         {user && (
                             <div ref={userMenuRef} className="dropdown-wrapper">
                                 <button 
@@ -321,6 +336,8 @@ export default function Navbar() {
                 </div>
             )}
 
+            {/* 反馈弹窗 */}
+            <FeedbackModal isOpen={showFeedbackModal} onClose={() => setShowFeedbackModal(false)} />
         </>
     );
 }
@@ -475,6 +492,14 @@ function CheckIcon() {
     return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="20 6 9 17 4 12" />
+        </svg>
+    );
+}
+
+function FeedbackIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
     );
 }
