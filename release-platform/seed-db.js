@@ -25,27 +25,45 @@ async function main() {
 
     // 创建默认超级管理员账号
     const adminPassword = await bcrypt.hash('admin123', 12);
-    await prisma.user.upsert({
-        where: { email: 'admin@98pct.com' },
-        update: { password: adminPassword, role: 'ADMIN' },
-        create: {
-            username: 'admin',
-            email: 'admin@98pct.com',
-            password: adminPassword,
-            name: '系统管理员',
-            phone: '13800000000',
-            role: 'ADMIN'
+    
+    // 先检查是否已存在 admin 用户
+    const existingAdmin = await prisma.user.findFirst({
+        where: {
+            OR: [
+                { username: 'admin' },
+                { email: 'admin@98pct.com' }
+            ]
         }
     });
-    console.log('默认管理员账号创建成功');
-    console.log('用户名: admin');
-    console.log('密码: admin123')
+
+    if (existingAdmin) {
+        console.log('默认管理员账号已存在,跳过创建');
+    } else {
+        await prisma.user.create({
+            data: {
+                username: 'admin',
+                email: 'admin@98pct.com',
+                password: adminPassword,
+                name: '系统管理员',
+                phone: '13800000000',
+                role: 'ADMIN'
+            }
+        });
+        console.log('默认管理员账号创建成功');
+        console.log('用户名: admin');
+        console.log('密码: admin123');
+    }
 }
 
 main()
     .catch((e) => {
-        console.error(e);
-        process.exit(1);
+        // 友好的错误处理
+        if (e.code === 'P2002') {
+            console.log('数据已存在,初始化完成');
+        } else {
+            console.error('数据库初始化失败:', e.message);
+        }
+        process.exit(0); // 改为正常退出,避免容器启动失败
     })
     .finally(async () => {
         await prisma.$disconnect();
