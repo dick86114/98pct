@@ -753,8 +753,10 @@ export default function ReleaseDetailPage({ params }) {
     // 批量提交检查清单
     const handleChecklistBatchSubmit = async (checkedMap) => {
         const token = localStorage.getItem('token');
+        console.log('提交检查清单:', { checkedMap, releaseId: id });
+        
         try {
-            await fetch(`/api/releases/${id}`, {
+            const res = await fetch(`/api/releases/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -763,9 +765,18 @@ export default function ReleaseDetailPage({ params }) {
                 body: JSON.stringify({ action: 'update_checklist', items: checkedMap }),
             });
 
+            const data = await res.json();
+            console.log('API 响应:', { status: res.status, data });
+
+            if (!res.ok) {
+                toast.error(data.error || '提交失败');
+                return;
+            }
+
             toast.success('检查项确认成功');
             fetchReleaseDetail(token);
         } catch (e) {
+            console.error('提交检查清单失败:', e);
             toast.error('提交失败');
         }
     };
@@ -800,7 +811,7 @@ export default function ReleaseDetailPage({ params }) {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
                 body: JSON.stringify({
-                    action: 'update_member_content',
+                    action: 'update_content',
                     ...contentForm,
                 }),
             });

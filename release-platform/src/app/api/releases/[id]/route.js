@@ -573,7 +573,13 @@ export async function PUT(request, { params }) {
         if (data.action === 'update_checklist') {
             const { items } = data; // { itemKey: checked_boolean }
 
+            if (!items || Object.keys(items).length === 0) {
+                return NextResponse.json({ error: '没有要更新的检查项' }, { status: 400 });
+            }
+
             const updates = [];
+            const notFoundItems = [];
+            
             for (const itemKey in items) {
                 const checked = items[itemKey];
 
@@ -593,14 +599,31 @@ export async function PUT(request, { params }) {
                             }
                         })
                     );
+                } else {
+                    notFoundItems.push(itemKey);
                 }
             }
 
-            if (updates.length > 0) {
-                await prisma.$transaction(updates);
+            if (notFoundItems.length > 0) {
+                console.log('未找到的检查项:', notFoundItems);
+                console.log('当前用户ID:', decoded.userId);
+                console.log('现有检查项:', existing.checklists.map(c => ({ itemKey: c.itemKey, userId: c.userId })));
             }
 
-            return NextResponse.json({ message: '检查清单更新成功' });
+            if (updates.length === 0) {
+                return NextResponse.json({ 
+                    error: '没有找到可更新的检查项，请确认这些检查项属于您',
+                    notFoundItems 
+                }, { status: 400 });
+            }
+
+            await prisma.$transaction(updates);
+
+            return NextResponse.json({ 
+                message: '检查清单更新成功',
+                updatedCount: updates.length,
+                notFoundCount: notFoundItems.length
+            });
         }
 
         // Action: update_members (ADMIN 或创建者 PM)
