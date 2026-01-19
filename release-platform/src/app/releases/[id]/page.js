@@ -50,9 +50,10 @@ export default function ReleaseDetailPage({ params }) {
     const [actionLoading, setActionLoading] = useState(false);
     const [expandedDocMembers, setExpandedDocMembers] = useState({}); // 跟踪哪些成员的附件列表展开
     
-    // 从字典获取数据库变更类型和所属系统
+    // 从字典获取数据库变更类型、所属系统和状态
     const { items: dbChangeTypes } = useDictionary('dbChangeType');
     const { items: systemOptions } = useDictionary('system');
+    const { getLabel: getStatusLabel } = useDictionary('status');
 
     // 开发人员内容填报状态
     const [contentForm, setContentForm] = useState({
@@ -1501,8 +1502,7 @@ export default function ReleaseDetailPage({ params }) {
     if (loading) return <div className="loading"><div className="loading-spinner"></div></div>;
     if (!release) return null;
 
-    // 从数据字典获取状态名称
-    const { getLabel: getStatusLabel } = useDictionary('status');
+    // 获取状态标签和样式
     const statusLabel = getStatusLabel(release.status);
     
     // 状态样式类映射
