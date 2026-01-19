@@ -1635,35 +1635,52 @@ export default function ReleaseDetailPage({ params }) {
                                         📊 团队进度
                                     </button>
                                 )}
-                                {/* 准备阶段才显示成员详情 tabs */}
-                                {release.stage === 'PREPARATION' && (
-                                    <>
-                                        <button 
-                                            className={`tab-btn ${activeTab === 'dev-changes' ? 'active' : ''}`}
-                                            onClick={() => setActiveTab('dev-changes')}
-                                        >
-                                            💻 开发变更
-                                        </button>
-                                        <button 
-                                            className={`tab-btn ${activeTab === 'qa-content' ? 'active' : ''}`}
-                                            onClick={() => setActiveTab('qa-content')}
-                                        >
-                                            🧪 测试内容
-                                        </button>
-                                        <button 
-                                            className={`tab-btn ${activeTab === 'dba-content' ? 'active' : ''}`}
-                                            onClick={() => setActiveTab('dba-content')}
-                                        >
-                                            🗄️ DBA审核
-                                        </button>
-                                        <button 
-                                            className={`tab-btn ${activeTab === 'op-content' ? 'active' : ''}`}
-                                            onClick={() => setActiveTab('op-content')}
-                                        >
-                                            💾 运维工作
-                                        </button>
-                                    </>
-                                )}
+                                {/* 准备阶段才显示成员详情 tabs - 只显示参与当次发版的角色 */}
+                                {release.stage === 'PREPARATION' && (() => {
+                                    // 获取所有参与发版的成员角色
+                                    const participatingRoles = new Set();
+                                    (release.members || []).forEach(member => {
+                                        const memberRoles = (member.user?.role || '').split(',');
+                                        memberRoles.forEach(role => participatingRoles.add(role.trim()));
+                                    });
+                                    
+                                    return (
+                                        <>
+                                            {participatingRoles.has('RD') && (
+                                                <button 
+                                                    className={`tab-btn ${activeTab === 'dev-changes' ? 'active' : ''}`}
+                                                    onClick={() => setActiveTab('dev-changes')}
+                                                >
+                                                    💻 开发变更
+                                                </button>
+                                            )}
+                                            {participatingRoles.has('QA') && (
+                                                <button 
+                                                    className={`tab-btn ${activeTab === 'qa-content' ? 'active' : ''}`}
+                                                    onClick={() => setActiveTab('qa-content')}
+                                                >
+                                                    🧪 测试内容
+                                                </button>
+                                            )}
+                                            {participatingRoles.has('DBA') && (
+                                                <button 
+                                                    className={`tab-btn ${activeTab === 'dba-content' ? 'active' : ''}`}
+                                                    onClick={() => setActiveTab('dba-content')}
+                                                >
+                                                    🗄️ DBA审核
+                                                </button>
+                                            )}
+                                            {participatingRoles.has('OP') && (
+                                                <button 
+                                                    className={`tab-btn ${activeTab === 'op-content' ? 'active' : ''}`}
+                                                    onClick={() => setActiveTab('op-content')}
+                                                >
+                                                    💾 运维工作
+                                                </button>
+                                            )}
+                                        </>
+                                    );
+                                })()}
                                 {/* 实施阶段显示 DBA 执行进度 */}
                                 {release.stage === 'IMPLEMENTATION' && (
                                     <button 
