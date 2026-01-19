@@ -184,6 +184,7 @@ export async function POST(request) {
                 releaseId: release.id,
                 userId: decoded.userId,
                 itemKey: item.key,
+                category: item.category, // 添加分类字段
                 stage: item.stage,
                 checked: false,
             });
@@ -208,6 +209,7 @@ export async function POST(request) {
                     releaseId: release.id,
                     userId: Number(member.userId),
                     itemKey: item.key,
+                    category: item.category, // 添加分类字段
                     stage: item.stage,
                     checked: false,
                 });
