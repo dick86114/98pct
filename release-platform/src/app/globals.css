@@ -171,46 +171,31 @@ body {
   position: relative;
 }
 
-/* 动态背景 - 流动渐变 + 网格 */
+/* 动态背景 - 流动渐变 + 网格 - 性能优化版 */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   background: 
-    /* 动态渐变光晕 */
+    /* 简化的渐变光晕 */
     radial-gradient(ellipse 100% 80% at 10% 0%, var(--primary-glow) 0%, transparent 50%),
     radial-gradient(ellipse 80% 60% at 90% 20%, var(--accent-glow) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 80% at 50% 100%, var(--tertiary-glow) 0%, transparent 50%),
-    /* 精细网格 */
-    linear-gradient(var(--border-subtle) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px),
     /* 基础渐变 */
     linear-gradient(180deg, var(--bg-void) 0%, var(--bg-primary) 50%, var(--bg-void) 100%);
-  background-size: 100% 100%, 100% 100%, 100% 100%, 40px 40px, 40px 40px, 100% 100%;
+  background-size: 100% 100%, 100% 100%, 100% 100%;
   pointer-events: none;
   z-index: -1;
-  animation: bgShift 30s ease-in-out infinite;
+  will-change: background-position;
+  /* 移除动画以提升性能 */
 }
 
-@keyframes bgShift {
-  0%, 100% { 
-    background-position: 0% 0%, 100% 0%, 50% 100%, 0 0, 0 0, 0 0;
-  }
-  50% { 
-    background-position: 20% 10%, 80% 30%, 30% 90%, 0 0, 0 0, 0 0;
-  }
-}
-
-/* 浅色主题背景 */
+/* 浅色主题背景 - 性能优化版 */
 [data-theme="light"] body::before {
   background: 
     radial-gradient(ellipse 100% 80% at 10% 0%, var(--primary-glow) 0%, transparent 50%),
     radial-gradient(ellipse 80% 60% at 90% 20%, var(--accent-glow) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 80% at 50% 100%, var(--tertiary-glow) 0%, transparent 50%),
-    linear-gradient(var(--border-subtle) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px),
     var(--bg-void);
-  background-size: 100% 100%, 100% 100%, 100% 100%, 40px 40px, 40px 40px, 100% 100%;
+  background-size: 100% 100%, 100% 100%, 100% 100%;
 }
 
 /* 选中文本样式 */
@@ -304,23 +289,17 @@ a:hover {
 }
 
 .btn-glow {
-  animation: btnGlow 2s ease-in-out infinite;
+  /* 移除无限动画以提升性能 */
+  box-shadow: 0 4px 20px var(--primary-glow), inset 0 1px 0 rgba(255,255,255,0.2);
 }
 
-@keyframes btnGlow {
-  0%, 100% {
-    box-shadow: 0 4px 20px var(--primary-glow), inset 0 1px 0 rgba(255,255,255,0.2);
-  }
-  50% {
-    box-shadow: 0 4px 30px var(--primary-glow), 0 0 20px var(--primary-glow), inset 0 1px 0 rgba(255,255,255,0.2);
-  }
-}
+/* 移除 btnGlow 动画 */
 
 .btn-secondary {
   background: var(--glass-bg);
   color: var(--text-primary);
   border-color: var(--border-color);
-  backdrop-filter: blur(12px);
+  /* 移除 backdrop-filter 以提升性能 */
 }
 
 .btn-secondary:hover {
@@ -400,10 +379,10 @@ a:hover {
   height: 32px;
 }
 
-/* ==================== 卡片系统 ==================== */
+/* ==================== 卡片系统 - 性能优化版 ==================== */
 .card {
   background: var(--glass-bg);
-  backdrop-filter: blur(20px);
+  /* 移除 backdrop-filter 以提升性能 */
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   padding: 24px;
@@ -411,6 +390,7 @@ a:hover {
   transition: all var(--transition-normal);
   position: relative;
   overflow: visible;
+  will-change: transform;
 }
 
 /* 包含表格的卡片 - 允许横向滚动 */
@@ -440,10 +420,10 @@ a:hover {
   transform: translateY(-4px);
 }
 
-/* 静态卡片 - 不需要悬停效果 */
+/* 静态卡片 - 不需要悬停效果 - 性能优化版 */
 .card-static {
   background: var(--glass-bg);
-  backdrop-filter: blur(20px);
+  /* 移除 backdrop-filter 以提升性能 */
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   padding: 24px;
@@ -1009,13 +989,10 @@ main {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: titleShimmer 8s ease infinite;
+  /* 移除动画以提升性能 */
 }
 
-@keyframes titleShimmer {
-  0%, 100% { background-position: 0% center; }
-  50% { background-position: 200% center; }
-}
+/* 移除 titleShimmer 动画 */
 
 .page-subtitle {
   font-size: 14px;
@@ -1118,13 +1095,13 @@ main {
   border-color: rgba(251, 191, 36, 0.2);
 }
 
-/* ==================== 导航栏 ==================== */
+/* ==================== 导航栏 - 性能优化版 ==================== */
 .navbar {
   position: sticky;
   top: 0;
   z-index: 1000;
   background: var(--glass-bg);
-  backdrop-filter: blur(24px);
+  /* 移除 backdrop-filter 以提升性能 */
   border-bottom: 1px solid var(--glass-border);
   padding: 0 24px;
   height: 64px;
@@ -1140,7 +1117,7 @@ main {
   width: 100%;
 }
 
-/* 导航栏底部渐变线 */
+/* 导航栏底部渐变线 - 性能优化版 */
 .navbar::after {
   content: '';
   position: absolute;
@@ -1155,15 +1132,13 @@ main {
     var(--tertiary-glow) 80%, 
     transparent 100%
   );
-  animation: navGlow 4s ease-in-out infinite;
+  opacity: 0.6;
+  /* 移除动画以提升性能 */
 }
 
-@keyframes navGlow {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
+/* 移除 navGlow 动画 */
 
-/* 品牌 Logo 动画 */
+/* 品牌 Logo 动画 - 性能优化版 */
 @keyframes logoRotate {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -1171,30 +1146,16 @@ main {
 
 @keyframes logoPulse {
   0%, 100% { 
-    box-shadow: 0 0 20px var(--primary-glow), 0 0 40px rgba(14, 165, 233, 0.2);
+    box-shadow: 0 0 20px var(--primary-glow);
     transform: scale(1);
   }
   50% { 
-    box-shadow: 0 0 30px var(--primary-glow), 0 0 60px rgba(14, 165, 233, 0.3);
+    box-shadow: 0 0 30px var(--primary-glow);
     transform: scale(1.02);
   }
 }
 
-@keyframes logoGlowRing {
-  0% { 
-    transform: rotate(0deg);
-    opacity: 0.6;
-  }
-  100% { 
-    transform: rotate(360deg);
-    opacity: 0.6;
-  }
-}
-
-@keyframes textShimmer {
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
-}
+/* 移除 logoGlowRing 和 textShimmer 动画以提升性能 */
 
 .navbar-brand {
   display: flex;
@@ -1219,7 +1180,7 @@ main {
   background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
   border-radius: 50%;
   opacity: 0.5;
-  animation: logoPulse 3s ease-in-out infinite;
+  animation: logoPulse 4s ease-in-out infinite;
   pointer-events: none;
 }
 
@@ -1230,7 +1191,7 @@ main {
   border-top-color: var(--primary);
   border-right-color: var(--tertiary);
   border-radius: 50%;
-  animation: logoRotate 8s linear infinite;
+  animation: logoRotate 10s linear infinite;
   pointer-events: none;
 }
 
@@ -1278,16 +1239,14 @@ main {
   background: linear-gradient(
     90deg, 
     var(--text-primary) 0%, 
-    var(--primary-light) 25%, 
-    var(--text-primary) 50%,
-    var(--tertiary) 75%,
+    var(--primary-light) 50%, 
     var(--text-primary) 100%
   );
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: textShimmer 4s linear infinite;
+  /* 移除动画以提升性能 */
 }
 
 .brand-subtitle {
@@ -1300,7 +1259,7 @@ main {
 }
 
 .navbar-brand:hover .brand-logo-ring {
-  animation-duration: 3s;
+  animation-duration: 2s;
   border-top-color: var(--tertiary);
   border-right-color: var(--accent);
 }
@@ -1311,7 +1270,7 @@ main {
 }
 
 .navbar-brand:hover .brand-text {
-  animation-duration: 1.5s;
+  /* 移除动画以提升性能 */
 }
 
 .navbar-nav {
@@ -1419,10 +1378,10 @@ main {
   font-family: var(--font-mono);
 }
 
-/* ==================== 表格系统 ==================== */
+/* ==================== 表格系统 - 性能优化版 ==================== */
 .table-container {
   background: var(--glass-bg);
-  backdrop-filter: blur(20px);
+  /* 移除 backdrop-filter 以提升性能 */
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   overflow-x: auto;
@@ -1497,10 +1456,10 @@ main {
   width: 20%;
 }
 
-/* ==================== 进度条系统 ==================== */
+/* ==================== 进度条系统 - 性能优化版 ==================== */
 .progress-container {
   background: var(--glass-bg);
-  backdrop-filter: blur(20px);
+  /* 移除 backdrop-filter 以提升性能 */
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   padding: 24px;
@@ -1579,7 +1538,7 @@ main {
   border-color: var(--primary-light);
   color: white;
   box-shadow: 0 0 30px var(--primary-glow);
-  animation: stagePulse 2s infinite;
+  /* 移除动画以提升性能 */
 }
 
 .stage-node.completed {
@@ -1613,16 +1572,13 @@ main {
   color: var(--success);
 }
 
-@keyframes stagePulse {
-  0%, 100% { box-shadow: 0 0 20px var(--primary-glow); }
-  50% { box-shadow: 0 0 40px var(--primary-glow), 0 0 60px var(--primary-glow); }
-}
+/* 移除 stagePulse 动画 */
 
 
 /* ==================== 检查清单 ==================== */
 .checklist {
   background: var(--glass-bg);
-  backdrop-filter: blur(20px);
+  /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   overflow: hidden;
@@ -1759,7 +1715,7 @@ main {
     radial-gradient(ellipse 50% 40% at 20% 20%, var(--primary-glow) 0%, transparent 50%),
     radial-gradient(ellipse 40% 50% at 80% 80%, var(--accent-glow) 0%, transparent 50%),
     radial-gradient(ellipse 60% 30% at 50% 50%, var(--tertiary-glow) 0%, transparent 50%);
-  animation: authBgFloat 20s ease-in-out infinite;
+  /* animation: authBgFloat 20s ease-in-out infinite; */ /* 移除动画以提升性能 */
   pointer-events: none;
 }
 
@@ -1774,7 +1730,7 @@ main {
   width: 100%;
   max-width: 440px;
   background: var(--glass-bg);
-  backdrop-filter: blur(32px);
+  /* backdrop-filter: blur(32px); */ /* 移除 backdrop-filter 以提升性能 */
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-2xl);
   padding: 48px 40px;
@@ -1867,7 +1823,7 @@ main {
 /* ==================== 发版卡片 ==================== */
 .release-card {
   background: var(--glass-bg);
-  backdrop-filter: blur(20px);
+  /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   padding: 24px;
@@ -1949,7 +1905,7 @@ main {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(12px);
+  /* backdrop-filter: blur(12px); */ /* 移除 backdrop-filter 以提升性能 */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2263,7 +2219,7 @@ main {
 /* ==================== 统计卡片 ==================== */
 .stat-card {
   background: var(--glass-bg);
-  backdrop-filter: blur(20px);
+  /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   padding: 24px;
@@ -2505,7 +2461,7 @@ main {
 /* ==================== 信息面板 ==================== */
 .info-panel {
   background: var(--glass-bg);
-  backdrop-filter: blur(20px);
+  /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   overflow: hidden;
@@ -2833,7 +2789,7 @@ main {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: neonShift 4s linear infinite;
+  /* animation: neonShift 4s linear infinite; */ /* 移除动画以提升性能 */
 }
 
 @keyframes neonShift {
@@ -2862,7 +2818,7 @@ main {
     rgba(255, 255, 255, 0.03) 55%,
     transparent 60%
   );
-  animation: glassShine 8s ease-in-out infinite;
+  /* animation: glassShine 8s ease-in-out infinite; */ /* 移除动画以提升性能 */
   pointer-events: none;
 }
 
@@ -2887,7 +2843,7 @@ main {
   background: var(--primary);
   border-radius: 50%;
   opacity: 0.3;
-  animation: particleFloat 20s linear infinite;
+  /* animation: particleFloat 20s linear infinite; */ /* 移除动画以提升性能 */
 }
 
 @keyframes particleFloat {
@@ -3050,7 +3006,7 @@ main {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
-  backdrop-filter: blur(20px);
+  /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
 }
 
 .page-header-actions {
@@ -3480,7 +3436,7 @@ main {
 
 .guide-section {
   background: var(--glass-bg);
-  backdrop-filter: blur(10px);
+  /* backdrop-filter: blur(10px); */ /* 移除 backdrop-filter 以提升性能 */
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   overflow: visible;
@@ -3956,7 +3912,7 @@ main {
   justify-content: space-between;
   padding: 24px 28px;
   border-radius: var(--radius-xl);
-  backdrop-filter: blur(20px);
+  /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
 }
 
 .banner-success {
@@ -4029,7 +3985,7 @@ main {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  backdrop-filter: blur(20px);
+  /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
   overflow: hidden;
 }
 
@@ -4093,7 +4049,7 @@ main {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
-  backdrop-filter: blur(20px);
+  /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
   overflow: hidden;
 }
 
@@ -4612,7 +4568,7 @@ main {
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition-normal);
-  backdrop-filter: blur(10px);
+  /* backdrop-filter: blur(10px); */ /* 移除 backdrop-filter 以提升性能 */
 }
 
 .dict-type-tab:hover {
@@ -4843,7 +4799,7 @@ main {
   background: linear-gradient(135deg, var(--glass-bg), rgba(0, 212, 255, 0.05));
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
-  backdrop-filter: blur(20px);
+  /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
 }
 
 .profile-avatar-large {
@@ -5432,7 +5388,7 @@ main {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
-  backdrop-filter: blur(20px);
+  /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
   overflow: hidden;
 }
 
@@ -5634,7 +5590,7 @@ main {
   border-radius: var(--radius-xl);
   margin-bottom: 24px;
   overflow-x: auto;
-  backdrop-filter: blur(20px);
+  /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
 }
 
 .tab-btn {
@@ -6167,7 +6123,7 @@ main {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
-  backdrop-filter: blur(20px);
+  /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
   overflow: hidden;
 }
 
@@ -6301,7 +6257,7 @@ main {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(8px);
+  /* backdrop-filter: blur(8px); */ /* 移除 backdrop-filter 以提升性能 */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6675,7 +6631,7 @@ main {
   position: sticky;
   top: 80px;
   z-index: 10;
-  backdrop-filter: blur(20px);
+  /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
 }
 
 .form-section {
@@ -6683,7 +6639,7 @@ main {
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   padding: 24px;
-  backdrop-filter: blur(20px);
+  /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
   overflow: visible;
 }
 
@@ -9125,7 +9081,7 @@ main {
 
 .stat-card {
   background: var(--glass-bg);
-  backdrop-filter: blur(20px);
+  /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   padding: 24px;
@@ -9301,7 +9257,7 @@ main {
 /* 空状态 */
 .empty-card {
   background: var(--glass-bg);
-  backdrop-filter: blur(20px);
+  /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   padding: 64px 24px;
@@ -9413,7 +9369,7 @@ main {
 
 .release-card {
     background: var(--glass-bg);
-    backdrop-filter: blur(20px);
+    /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-xl);
     padding: 0;
@@ -9855,7 +9811,7 @@ main {
 
 .checklist-panel {
     background: var(--glass-bg);
-    backdrop-filter: blur(20px);
+    /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-xl);
     overflow: hidden;
@@ -10399,7 +10355,7 @@ main {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(12px);
+    /* backdrop-filter: blur(12px); */ /* 移除 backdrop-filter 以提升性能 */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -10808,7 +10764,7 @@ main {
 /* 筛选器 */
 .filter-section {
     background: var(--glass-bg);
-    backdrop-filter: blur(20px);
+    /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-xl);
     padding: 24px;
@@ -10924,7 +10880,7 @@ main {
 /* 空状态 */
 .empty-card {
     background: var(--glass-bg);
-    backdrop-filter: blur(20px);
+    /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-xl);
     padding: 80px 24px;
@@ -11002,11 +10958,28 @@ main {
 
     .page-header {
         flex-direction: column;
-        gap: 20px;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    
+    .page-header > div {
+        width: 100%;
+    }
+
+    .header-actions {
+        width: 100%;
+        display: flex;
+        gap: 10px;
+    }
+    
+    .header-actions .btn {
+        flex: 1;
+        justify-content: center;
     }
 
     .page-title {
-        font-size: 28px;
+        font-size: 24px;
+        word-break: break-all;
     }
 
     .create-btn {
@@ -11145,7 +11118,7 @@ main {
     width: 100%;
     max-width: 420px;
     background: var(--glass-bg);
-    backdrop-filter: blur(40px);
+    /* backdrop-filter: blur(40px); */ /* 移除 backdrop-filter 以提升性能 */
     border: 1px solid var(--glass-border);
     border-radius: 28px;
     padding: 48px 40px;
@@ -11631,7 +11604,7 @@ main {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(8px);
+    /* backdrop-filter: blur(8px); */ /* 移除 backdrop-filter 以提升性能 */
     z-index: 2000;
     animation: overlayFadeIn 0.2s ease;
 }
@@ -11909,7 +11882,7 @@ main {
     gap: 16px;
     padding: 20px 24px;
     background: var(--glass-bg);
-    backdrop-filter: blur(20px);
+    /* backdrop-filter: blur(20px); */ /* 移除 backdrop-filter 以提升性能 */
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-xl);
     margin-bottom: 24px;
@@ -12372,7 +12345,7 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(10px);
+  /* backdrop-filter: blur(10px); */ /* 移除 backdrop-filter 以提升性能 */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
