@@ -42,7 +42,10 @@ release-platform/uploads/*
 # 测试输出
 test-results/
 playwright-report/
+release-platform/public/snapshots/*
+!release-platform/public/snapshots/.gitkeep
 
 # 其他
 *.tgz
 .cache/
+*.tmp

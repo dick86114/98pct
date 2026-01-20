@@ -1,46 +1,50 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import useRoles from '@/hooks/useRoles';
-
-// 检查用户是否有权限
-function hasPermission(userRoleString, allowedRoles) {
-    if (!userRoleString) return false;
-    const userRoles = userRoleString.split(',');
-    return userRoles.includes('PM') || allowedRoles.some(r => userRoles.includes(r));
-}
+import { ChecklistIcon, CheckIcon, EmptyIcon, SubmitIcon } from '@/components/Icons';
+import { hasPermission } from '@/lib/utils';
 
 export default function ChecklistPanel({ checklists, stage, userRole, onSubmit, onBeforeSubmit }) {
     const [updating, setUpdating] = useState(false);
     const { getRoleLabel } = useRoles();
     const [localChecked, setLocalChecked] = useState({});
 
-    // 按阶段筛选
-    const stageItems = checklists.filter(item => item.stage === stage);
+    // 使用 useMemo 缓存计算结果，避免每次渲染都重新计算
+    const { stageItems, visibleItems, completedCount, totalCount, progress } = useMemo(() => {
+        // 按阶段筛选
+        const stageItems = checklists.filter(item => item.stage === stage);
+        
+        // 按角色筛选可见项
+        const isPM = (userRole || '').includes('PM');
+        const userRoleList = (userRole || '').split(',');
+        
+        const visibleItems = stageItems.filter(item => {
+            if (isPM) return true;
+            return item.allowedRoles.some(r => userRoleList.includes(r));
+        });
+        
+        const completedCount = stageItems.filter(item => item.checked).length;
+        const totalCount = stageItems.length;
+        const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+        
+        return { stageItems, visibleItems, completedCount, totalCount, progress };
+    }, [checklists, stage, userRole]);
 
-    // 按角色筛选可见项
-    const isPM = (userRole || '').includes('PM');
-    const userRoleList = (userRole || '').split(',');
-
-    const visibleItems = stageItems.filter(item => {
-        if (isPM) return true;
-        return item.allowedRoles.some(r => userRoleList.includes(r));
-    });
-
-    const getIsChecked = (item) => {
+    const getIsChecked = useCallback((item) => {
         return localChecked[item.itemKey] !== undefined
             ? localChecked[item.itemKey]
             : item.checked;
-    };
+    }, [localChecked]);
 
-    const handleToggle = (item) => {
+    const handleToggle = useCallback((item) => {
         const current = getIsChecked(item);
         setLocalChecked(prev => ({
             ...prev,
             [item.itemKey]: !current
         }));
-    };
+    }, [getIsChecked]);
 
     const handleSubmit = async () => {
         // 如果有 onBeforeSubmit 回调，先执行校验和保存
@@ -70,9 +74,6 @@ export default function ChecklistPanel({ checklists, stage, userRole, onSubmit, 
         }
     };
 
-    const completedCount = stageItems.filter(item => item.checked).length;
-    const totalCount = stageItems.length;
-    const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
     const hasChanges = Object.keys(localChecked).length > 0;
 
     return (
@@ -190,42 +191,5 @@ export default function ChecklistPanel({ checklists, stage, userRole, onSubmit, 
                 </div>
             )}
         </div>
-    );
-}
-
-// 图标组件
-function ChecklistIcon() {
-    return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 11l3 3L22 4" />
-            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-        </svg>
-    );
-}
-
-function CheckIcon() {
-    return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12" />
-        </svg>
-    );
-}
-
-function EmptyIcon() {
-    return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-            <line x1="9" y1="9" x2="15" y2="15" />
-            <line x1="15" y1="9" x2="9" y2="15" />
-        </svg>
-    );
-}
-
-function SubmitIcon() {
-    return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-            <polyline points="22 4 12 14.01 9 11.01" />
-        </svg>
     );
 }

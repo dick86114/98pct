@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 
 // 角色标签映射
 const ROLE_LABELS = {
@@ -44,8 +44,8 @@ export default function TreeMemberSelector({ allUsers, selectedMembers, onChange
         OP: false
     });
 
-    // 按角色分组用户
-    const groupUsersByRole = () => {
+    // 使用 useMemo 缓存按角色分组的用户，避免每次渲染都重新计算
+    const userGroups = useMemo(() => {
         const groups = {
             RD: [],
             QA: [],
@@ -75,20 +75,18 @@ export default function TreeMemberSelector({ allUsers, selectedMembers, onChange
         });
 
         return groups;
-    };
-
-    const userGroups = groupUsersByRole();
+    }, [allUsers, excludeRoles]);
 
     // 切换角色组展开状态
-    const toggleRole = (role) => {
+    const toggleRole = useCallback((role) => {
         setExpandedRoles(prev => ({
             ...prev,
             [role]: !prev[role]
         }));
-    };
+    }, []);
 
     // 切换用户选择状态
-    const toggleUser = (user, role) => {
+    const toggleUser = useCallback((user, role) => {
         const memberEntry = selectedMembers.find(m => m.userId === user.id);
         
         if (memberEntry) {
@@ -98,19 +96,19 @@ export default function TreeMemberSelector({ allUsers, selectedMembers, onChange
             // 选择成员,使用当前角色组的角色
             onChange([...selectedMembers, { userId: user.id, role }]);
         }
-    };
+    }, [selectedMembers, onChange]);
 
     // 更改用户的参与角色
-    const changeUserRole = (userId, newRole) => {
+    const changeUserRole = useCallback((userId, newRole) => {
         onChange(selectedMembers.map(m => 
             m.userId === userId ? { ...m, role: newRole } : m
         ));
-    };
+    }, [selectedMembers, onChange]);
 
     // 统计每个角色组的选中人数
-    const getSelectedCount = (role) => {
+    const getSelectedCount = useCallback((role) => {
         return selectedMembers.filter(m => m.role === role).length;
-    };
+    }, [selectedMembers]);
 
     return (
         <div className="tree-member-selector">

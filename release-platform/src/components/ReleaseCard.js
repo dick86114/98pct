@@ -1,7 +1,10 @@
 'use client';
 
+import { memo } from 'react';
 import Link from 'next/link';
 import useDictionary from '@/hooks/useDictionary';
+import { UserIcon, CalendarIcon, ClockIcon, ArrowIcon } from '@/components/Icons';
+import { formatDate, formatRelativeTime } from '@/lib/utils';
 
 const STAGE_CONFIG = {
     PREPARATION: { label: '准备阶段', icon: '📋', color: 'info', gradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' },
@@ -20,14 +23,12 @@ const STATUS_CLASS_MAP = {
     FAILED: 'status-failed',
 };
 
-export default function ReleaseCard({ release }) {
+function ReleaseCard({ release }) {
     // 从数据字典获取状态名称
     const { getLabel: getStatusLabel } = useDictionary('status');
     
     const statusLabel = getStatusLabel(release.status);
     const statusClass = STATUS_CLASS_MAP[release.status] || 'status-draft';
-    const status = { label: statusLabel, class: statusClass };
-    
     const stage = STAGE_CONFIG[release.stage] || STAGE_CONFIG.PREPARATION;
 
     return (
@@ -89,61 +90,14 @@ export default function ReleaseCard({ release }) {
     );
 }
 
-function formatDate(dateStr) {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('zh-CN', {
-        month: 'long',
-        day: 'numeric',
-    });
-}
-
-function formatRelativeTime(dateStr) {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now - date;
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    
-    if (days === 0) return '今天';
-    if (days === 1) return '昨天';
-    if (days < 7) return `${days}天前`;
-    if (days < 30) return `${Math.floor(days / 7)}周前`;
-    return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
-}
-
-function UserIcon() {
+// 使用 memo 优化性能，避免不必要的重渲染
+export default memo(ReleaseCard, (prevProps, nextProps) => {
+    // 只有当 release 的关键属性变化时才重新渲染
     return (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-        </svg>
+        prevProps.release.id === nextProps.release.id &&
+        prevProps.release.version === nextProps.release.version &&
+        prevProps.release.status === nextProps.release.status &&
+        prevProps.release.stage === nextProps.release.stage &&
+        prevProps.release.description === nextProps.release.description
     );
-}
-
-function CalendarIcon() {
-    return (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-            <line x1="16" y1="2" x2="16" y2="6" />
-            <line x1="8" y1="2" x2="8" y2="6" />
-            <line x1="3" y1="10" x2="21" y2="10" />
-        </svg>
-    );
-}
-
-function ClockIcon() {
-    return (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-        </svg>
-    );
-}
-
-function ArrowIcon() {
-    return (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="5" y1="12" x2="19" y2="12" />
-            <polyline points="12 5 19 12 12 19" />
-        </svg>
-    );
-}
+});

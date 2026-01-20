@@ -1,26 +1,54 @@
 # 今天发什么发版管理平台 Docker Compose 配置
+# 版本: 3.0.0
+# 更新日期: 2025-01-20
+
 services:
   98pct:
     # 使用 Docker Hub 镜像（推荐，国内访问更快）
     image: dick86114/98pct:latest
     # 或使用 GitHub Container Registry 镜像
     # image: ghcr.io/dick86114/98pct:latest
+    
     container_name: 98pct
+    
+    # 端口映射：主机端口:容器端口
     ports:
       - "9898:3000"
+    
+    # 从 .env 文件加载环境变量
     env_file:
       - .env
+    
+    # 额外的环境变量
     environment:
       - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+    
+    # 数据卷挂载
     volumes:
-      # 持久化上传的文件
+      # 持久化上传的文件（重要：确保数据不丢失）
       - ./uploads:/app/public/uploads
+    
+    # 重启策略：除非手动停止，否则总是重启
     restart: unless-stopped
+    
+    # 网络模式
     network_mode: bridge
-    # 健康检查
+    
+    # 健康检查配置
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      interval: 30s      # 每 30 秒检查一次
+      timeout: 10s       # 超时时间 10 秒
+      retries: 3         # 失败 3 次后标记为不健康
+      start_period: 40s  # 启动后 40 秒开始健康检查
+    
+    # 资源限制（可选，根据实际情况调整）
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 512M
