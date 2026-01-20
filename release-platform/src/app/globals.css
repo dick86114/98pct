@@ -161,7 +161,7 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
+html, body {
   font-family: var(--font-sans);
   background: var(--bg-void);
   color: var(--text-primary);
@@ -169,6 +169,13 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   position: relative;
+  width: 100%;
+  max-width: 100vw;
+}
+
+body {
+  margin: 0;
+  padding: 0;
 }
 
 /* 动态背景 - 流动渐变 + 网格 - 性能优化版 */
@@ -963,6 +970,11 @@ select.form-input option {
 .container {
   max-width: 1400px;
   margin: 0 auto;
+  padding: 0 24px;
+}
+
+.container-full {
+  width: 100%;
   padding: 0 24px;
 }
 
@@ -4898,7 +4910,7 @@ main {
 
 .dict-table th:nth-child(1),
 .dict-table td:nth-child(1) {
-  width: 180px;
+  width: 200px;
 }
 
 .dict-table th:nth-child(2),
@@ -4908,17 +4920,18 @@ main {
 
 .dict-table th:nth-child(3),
 .dict-table td:nth-child(3) {
-  width: 70px;
+  width: 100px;
+  text-align: center;
 }
 
 .dict-table th:nth-child(4),
 .dict-table td:nth-child(4) {
-  width: 70px;
+  width: 150px;
 }
 
 .dict-table th:nth-child(5),
 .dict-table td:nth-child(5) {
-  width: 200px;
+  width: 240px;
 }
 
 /* ==================== 发版记录管理页面样式 ==================== */
@@ -4929,53 +4942,53 @@ main {
   width: 100%;
 }
 
-/* 版本号列 - 加宽 */
+/* 版本号列 */
 .admin-table th:nth-child(1),
 .admin-table td:nth-child(1) {
-  width: 100px;
+  width: 120px;
 }
 
-/* 描述列 - 缩小以平衡整体 */
+/* 描述列 */
 .admin-table th:nth-child(2),
 .admin-table td:nth-child(2) {
   width: auto;
   min-width: 200px;
 }
 
-/* 阶段列 - 加宽 */
+/* 阶段列 */
 .admin-table th:nth-child(3),
 .admin-table td:nth-child(3) {
-  width: 100px;
+  width: 120px;
 }
 
-/* 状态列 - 加宽 */
+/* 状态列 */
 .admin-table th:nth-child(4),
 .admin-table td:nth-child(4) {
-  width: 100px;
+  width: 120px;
 }
 
-/* 计划日期列 - 加宽 */
+/* 计划日期列 */
 .admin-table th:nth-child(5),
 .admin-table td:nth-child(5) {
-  width: 110px;
+  width: 120px;
 }
 
-/* 创建人列 - 加宽 */
+/* 创建人列 */
 .admin-table th:nth-child(6),
 .admin-table td:nth-child(6) {
-  width: 110px;
+  width: 120px;
 }
 
-/* 创建时间列 - 加宽 */
+/* 创建时间列 */
 .admin-table th:nth-child(7),
 .admin-table td:nth-child(7) {
-  width: 110px;
+  width: 120px;
 }
 
 /* 操作列 */
 .admin-table th:nth-child(8),
 .admin-table td:nth-child(8) {
-  width: 200px;
+  width: 240px;
 }
 
 /* 创建人单元格不换行 */
@@ -13923,5 +13936,207 @@ main {
 
   .feedback-submit-footer .btn {
     width: 100%;
+  }
+}
+
+
+/* ==================== 移动端横向滚动修复 ==================== */
+* {
+  max-width: 100%;
+}
+
+html {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+body {
+  overflow-x: hidden;
+  width: 100%;
+  position: relative;
+}
+
+/* 确保所有容器不超出屏幕 */
+.container,
+main,
+section,
+.card,
+.table-container {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* 移动端特定优化 */
+@media (max-width: 768px) {
+  /* 防止所有元素超出屏幕 */
+  * {
+    max-width: 100vw;
+  }
+
+  /* 容器内边距优化 */
+  .container {
+    padding: 0 12px;
+  }
+
+  /* 导航栏优化 */
+  .navbar {
+    padding: 0 12px;
+  }
+
+  /* 卡片内边距优化 */
+  .card {
+    padding: 16px;
+  }
+
+  /* 表格容器优化 - 允许横向滚动 */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 表格最小宽度 */
+  .table {
+    min-width: 600px;
+  }
+
+  /* 页面标题优化 */
+  .page-title {
+    font-size: 24px;
+  }
+
+  /* 按钮组优化 */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  /* 网格布局优化 */
+  .grid {
+    gap: 16px;
+  }
+
+  /* 统计卡片网格优化 */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  /* 发版卡片网格优化 */
+  .releases-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* 表单组优化 */
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  /* 输入框优化 */
+  .form-input,
+  .form-select,
+  .form-textarea {
+    font-size: 16px; /* 防止 iOS 自动缩放 */
+  }
+
+  /* 模态框优化 */
+  .modal {
+    padding: 12px;
+  }
+
+  .modal-content {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  /* 欢迎区域优化 */
+  .welcome-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .create-btn {
+    width: 100%;
+  }
+
+  /* 章节标题优化 */
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  /* 用户菜单优化 */
+  .user-menu {
+    padding: 4px 8px;
+  }
+
+  .user-info {
+    display: none;
+  }
+
+  /* 导航链接优化 */
+  .nav-link {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  /* 品牌文字优化 */
+  .brand-text {
+    font-size: 16px;
+  }
+
+  .brand-subtitle {
+    font-size: 9px;
+  }
+
+  /* Logo 优化 */
+  .brand-logo-wrapper,
+  .brand-logo {
+    width: 36px;
+    height: 36px;
+  }
+
+  .brand-logo img {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+/* 超小屏幕优化 */
+@media (max-width: 480px) {
+  .container {
+    padding: 0 8px;
+  }
+
+  .navbar {
+    padding: 0 8px;
+  }
+
+  .card {
+    padding: 12px;
+  }
+
+  .page-title {
+    font-size: 20px;
+  }
+
+  /* 统计卡片单列显示 */
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* 按钮优化 */
+  .btn {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  /* 徽章优化 */
+  .badge {
+    font-size: 10px;
+    padding: 4px 8px;
   }
 }

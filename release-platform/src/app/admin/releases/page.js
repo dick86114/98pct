@@ -281,7 +281,7 @@ export default function AdminReleasesPage() {
         <>
             <Navbar />
             <main className="page-container">
-                <div className="container" style={{ maxWidth: '1400px' }}>
+                <div className="container-full">
                     {/* 页面头部 */}
                     <div className="page-header">
                         <div className="page-header-content">
@@ -401,12 +401,12 @@ export default function AdminReleasesPage() {
                                             </td>
                                             <td>
                                                 <span className={`badge ${getStageBadgeClass(release.stage)}`}>
-                                                    {STAGE_LABELS[release.stage]}
+                                                    {STAGE_LABELS[release.stage] || release.stage}
                                                 </span>
                                             </td>
                                             <td>
                                                 <span className={`badge ${getStatusBadgeClass(release.status)}`}>
-                                                    {getStatusLabel(release.status)}
+                                                    {getStatusLabel(release.status) || release.status}
                                                 </span>
                                             </td>
                                             <td>

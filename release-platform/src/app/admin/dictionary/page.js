@@ -215,7 +215,7 @@ export default function DictionaryPage() {
         <>
             <Navbar />
             <main className="page-container">
-                <div className="container">
+                <div className="container-full">
                     {/* 页面头部 */}
                     <div className="page-header">
                         <div className="page-header-content">
@@ -302,9 +302,11 @@ export default function DictionaryPage() {
                                                     <span className="sort-order">{item.sortOrder}</span>
                                                 </td>
                                                 <td>
-                                                    <span className={`badge ${item.enabled ? 'badge-success' : 'badge-secondary'}`}>
-                                                        {item.enabled ? '启用' : '禁用'}
-                                                    </span>
+                                                    {item.enabled ? (
+                                                        <span className="badge badge-success">启用</span>
+                                                    ) : (
+                                                        <span className="badge badge-secondary">禁用</span>
+                                                    )}
                                                 </td>
                                                 <td className="text-right">
                                                     <div className="action-buttons">
