@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import Navbar from '@/components/Navbar';
+import ConfirmModal from '@/components/ConfirmModal';
 
 const TYPE_LABELS = {
     bug: '🐛 Bug反馈',
@@ -34,6 +35,11 @@ export default function FeedbackManagementPage() {
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [replyText, setReplyText] = useState('');
     const [updating, setUpdating] = useState(false);
+
+    // 删除确认弹窗状态
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [feedbackToDelete, setFeedbackToDelete] = useState(null);
+    const [deleting, setDeleting] = useState(false);
 
     // 筛选和搜索状态
     const [filterType, setFilterType] = useState('');
@@ -112,8 +118,7 @@ export default function FeedbackManagementPage() {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('确定要删除这条反馈吗？')) return;
-
+        setDeleting(true);
         try {
             const token = localStorage.getItem('token');
             const res = await fetch(`/api/feedback/${id}`, {
@@ -124,11 +129,20 @@ export default function FeedbackManagementPage() {
             if (!res.ok) throw new Error('删除失败');
 
             toast.success('删除成功');
+            setShowDeleteModal(false);
+            setFeedbackToDelete(null);
             fetchFeedbacks();
         } catch (error) {
             console.error('Delete feedback error:', error);
             toast.error(`删除失败: ${error.message}`);
+        } finally {
+            setDeleting(false);
         }
+    };
+
+    const handleDeleteClick = (feedback) => {
+        setFeedbackToDelete(feedback);
+        setShowDeleteModal(true);
     };
 
     // 筛选和搜索后的反馈列表
@@ -292,7 +306,7 @@ export default function FeedbackManagementPage() {
                                             </button>
                                             <button
                                                 className="btn btn-sm btn-ghost btn-danger-ghost"
-                                                onClick={() => handleDelete(feedback.id)}
+                                                onClick={() => handleDeleteClick(feedback)}
                                             >
                                                 🗑️ 删除
                                             </button>
@@ -315,64 +329,106 @@ export default function FeedbackManagementPage() {
                 </div>
             </main>
 
-            {/* 详情弹窗 */}
+            {/* 详情弹窗 - 重新设计 */}
             {showDetailModal && selectedFeedback && (
                 <div className="modal-overlay" onClick={() => setShowDetailModal(false)}>
-                    <div className="modal modal-md" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3 className="modal-title">
-                                <span className="modal-icon">💡</span>
-                                反馈详情
-                            </h3>
+                    <div className="feedback-detail-modal" onClick={(e) => e.stopPropagation()}>
+                        {/* 头部 */}
+                        <div className="feedback-detail-header">
+                            <div className="feedback-detail-header-content">
+                                <div className="feedback-detail-icon">💡</div>
+                                <div className="feedback-detail-header-text">
+                                    <h3 className="feedback-detail-title-text">反馈详情</h3>
+                                    <p className="feedback-detail-subtitle">查看并处理用户反馈</p>
+                                </div>
+                            </div>
                             <button
-                                className="modal-close"
+                                className="feedback-detail-close"
                                 onClick={() => setShowDetailModal(false)}
                             >
                                 ×
                             </button>
                         </div>
 
-                        <div className="modal-body">
-                            <div className="feedback-detail-section">
-                                <div className="feedback-detail-label">类型</div>
-                                <div className="feedback-type-badge">
-                                    {TYPE_LABELS[selectedFeedback.type]}
+                        {/* 主体内容 */}
+                        <div className="feedback-detail-body">
+                            {/* 类型和状态卡片 */}
+                            <div className="feedback-meta-cards">
+                                <div className="feedback-meta-card">
+                                    <div className="feedback-meta-label">反馈类型</div>
+                                    <div className="feedback-meta-value">
+                                        {TYPE_LABELS[selectedFeedback.type]}
+                                    </div>
+                                </div>
+                                <div className="feedback-meta-card">
+                                    <div className="feedback-meta-label">当前状态</div>
+                                    <div className="feedback-meta-value">
+                                        <span className={`badge badge-${STATUS_COLORS[selectedFeedback.status]}`}>
+                                            {STATUS_LABELS[selectedFeedback.status]}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="feedback-detail-section">
-                                <div className="feedback-detail-label">标题</div>
-                                <div className="feedback-detail-value">{selectedFeedback.title}</div>
-                            </div>
-
-                            <div className="feedback-detail-section">
-                                <div className="feedback-detail-label">详细描述</div>
-                                <div className="feedback-detail-content">{selectedFeedback.content}</div>
-                            </div>
-
-                            <div className="feedback-detail-section">
-                                <div className="feedback-detail-label">提交人</div>
-                                <div className="feedback-detail-value">{selectedFeedback.user?.name || '未知'}</div>
-                            </div>
-
-                            <div className="feedback-detail-section">
-                                <div className="feedback-detail-label">提交时间</div>
-                                <div className="feedback-detail-value">
-                                    {new Date(selectedFeedback.createdAt).toLocaleString('zh-CN')}
+                            {/* 标题卡片 */}
+                            <div className="feedback-content-card">
+                                <div className="feedback-content-label">
+                                    <span className="feedback-content-icon">📝</span>
+                                    反馈标题
+                                </div>
+                                <div className="feedback-content-text feedback-title-large">
+                                    {selectedFeedback.title}
                                 </div>
                             </div>
 
-                            <div className="feedback-detail-section">
-                                <div className="feedback-detail-label">当前状态</div>
-                                <span className={`badge badge-${STATUS_COLORS[selectedFeedback.status]}`}>
-                                    {STATUS_LABELS[selectedFeedback.status]}
-                                </span>
+                            {/* 详细描述卡片 */}
+                            <div className="feedback-content-card">
+                                <div className="feedback-content-label">
+                                    <span className="feedback-content-icon">📄</span>
+                                    详细描述
+                                </div>
+                                <div className="feedback-content-text feedback-description">
+                                    {selectedFeedback.content}
+                                </div>
                             </div>
 
-                            <div className="form-group">
-                                <label className="form-label">管理员回复</label>
+                            {/* 提交信息卡片 */}
+                            <div className="feedback-info-grid">
+                                <div className="feedback-info-item">
+                                    <div className="feedback-info-icon">👤</div>
+                                    <div className="feedback-info-content">
+                                        <div className="feedback-info-label">提交人</div>
+                                        <div className="feedback-info-value">
+                                            {selectedFeedback.user?.name || '未知'}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="feedback-info-item">
+                                    <div className="feedback-info-icon">🕐</div>
+                                    <div className="feedback-info-content">
+                                        <div className="feedback-info-label">提交时间</div>
+                                        <div className="feedback-info-value">
+                                            {new Date(selectedFeedback.createdAt).toLocaleString('zh-CN', {
+                                                year: 'numeric',
+                                                month: '2-digit',
+                                                day: '2-digit',
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                                second: '2-digit'
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 管理员回复区域 */}
+                            <div className="feedback-reply-card">
+                                <div className="feedback-content-label">
+                                    <span className="feedback-content-icon">💬</span>
+                                    管理员回复
+                                </div>
                                 <textarea
-                                    className="form-input"
+                                    className="feedback-reply-textarea"
                                     placeholder="输入回复内容（可选）..."
                                     value={replyText}
                                     onChange={(e) => setReplyText(e.target.value)}
@@ -381,7 +437,8 @@ export default function FeedbackManagementPage() {
                             </div>
                         </div>
 
-                        <div className="modal-footer">
+                        {/* 底部操作栏 */}
+                        <div className="feedback-detail-footer">
                             <button
                                 type="button"
                                 className="btn btn-secondary"
@@ -389,32 +446,30 @@ export default function FeedbackManagementPage() {
                             >
                                 取消
                             </button>
-                            <div style={{ display: 'flex', gap: '8px' }}>
+                            <div className="feedback-status-actions">
                                 <button
-                                    className="btn btn-sm btn-secondary"
+                                    className="feedback-status-btn feedback-status-pending"
                                     onClick={() => handleUpdateStatus('pending')}
                                     disabled={updating}
                                 >
                                     待处理
                                 </button>
                                 <button
-                                    className="btn btn-sm"
-                                    style={{ background: 'var(--info)', color: 'white' }}
+                                    className="feedback-status-btn feedback-status-processing"
                                     onClick={() => handleUpdateStatus('processing')}
                                     disabled={updating}
                                 >
                                     处理中
                                 </button>
                                 <button
-                                    className="btn btn-sm btn-success"
+                                    className="feedback-status-btn feedback-status-resolved"
                                     onClick={() => handleUpdateStatus('resolved')}
                                     disabled={updating}
                                 >
                                     已解决
                                 </button>
                                 <button
-                                    className="btn btn-sm"
-                                    style={{ background: 'var(--text-muted)', color: 'white' }}
+                                    className="feedback-status-btn feedback-status-rejected"
                                     onClick={() => handleUpdateStatus('rejected')}
                                     disabled={updating}
                                 >
@@ -425,6 +480,22 @@ export default function FeedbackManagementPage() {
                     </div>
                 </div>
             )}
+
+            {/* 删除确认弹窗 */}
+            <ConfirmModal
+                isOpen={showDeleteModal}
+                onClose={() => {
+                    setShowDeleteModal(false);
+                    setFeedbackToDelete(null);
+                }}
+                onConfirm={() => handleDelete(feedbackToDelete?.id)}
+                title="确认删除"
+                message={`确定要删除反馈"${feedbackToDelete?.title}"吗？此操作无法撤销。`}
+                confirmText="删除"
+                cancelText="取消"
+                type="danger"
+                loading={deleting}
+            />
         </>
     );
 }
