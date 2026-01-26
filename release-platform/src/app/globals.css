@@ -7398,6 +7398,16 @@ main {
   border: 1px solid var(--border-color);
 }
 
+/* 成员检查清单交互优化 */
+.member-checklist-item.interactive:hover {
+  background: var(--bg-tertiary);
+  transition: background-color var(--transition-fast);
+}
+
+.member-checklist-item.interactive input[type="checkbox"] {
+  cursor: pointer;
+}
+
 /* 必填标记 */
 .label-required::after {
   content: " *";

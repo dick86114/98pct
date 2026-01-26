@@ -156,6 +156,13 @@ export default function ReleaseDetailPage({ params }) {
     // 成员详情弹窗状态
     const [viewingMember, setViewingMember] = useState(null);
 
+    // 项目经理代填/代勾选状态（仅管理员或发版创建者 PM 可用）
+    const [pmEditingMember, setPmEditingMember] = useState(false);
+    const [pmMemberDraft, setPmMemberDraft] = useState(null);
+    const [pmChecklistDraft, setPmChecklistDraft] = useState({});
+    const [pmSavingMember, setPmSavingMember] = useState(false);
+    const [pmSavingChecklist, setPmSavingChecklist] = useState(false);
+
     // 成员管理状态
     const [isEditingMembers, setIsEditingMembers] = useState(false);
     const [allUsers, setAllUsers] = useState([]);
@@ -172,6 +179,95 @@ export default function ReleaseDetailPage({ params }) {
         setRefreshing(false);
         toast.success('数据已刷新');
     };
+
+    useEffect(() => {
+        if (!viewingMember) {
+            setPmEditingMember(false);
+            setPmMemberDraft(null);
+            setPmChecklistDraft({});
+            setPmSavingMember(false);
+            setPmSavingChecklist(false);
+            return;
+        }
+
+        const content = viewingMember.content || {};
+        setPmMemberDraft({
+            devName: content.devName || '',
+            devPhone: content.devPhone || '',
+            system: content.system || '',
+            contentDesc: content.contentDesc || '',
+            dbChanges: (content.dbChanges || []).map(db => ({
+                changeType: db.changeType || '',
+                dbName: db.dbName || '',
+                tableName: db.tableName || '',
+                reason: db.reason || '',
+                sql: db.sql || '',
+                impact: db.impact || '',
+                executionTime: db.executionTime ? String(db.executionTime).split('T')[0] : '',
+                affectsOnline: !!db.affectsOnline
+            })),
+            configChanges: (content.configChanges || []).map(cfg => ({
+                reason: cfg.reason || '',
+                content: cfg.content || '',
+                impact: cfg.impact || '',
+                affectsOnline: !!cfg.affectsOnline
+            })),
+            qaName: content.qaName || '',
+            qaPhone: content.qaPhone || '',
+            qaTestDate: content.qaTestDate ? String(content.qaTestDate).split('T')[0] : '',
+            poName: content.poName || '',
+            poPhone: content.poPhone || '',
+            poAcceptDate: content.poAcceptDate ? String(content.poAcceptDate).split('T')[0] : '',
+            poAcceptComment: content.poAcceptComment || '',
+            dbaName: content.dbaName || '',
+            dbaPhone: content.dbaPhone || '',
+            dbaReviewDate: content.dbaReviewDate ? String(content.dbaReviewDate).split('T')[0] : '',
+            dbaReviewComment: content.dbaReviewComment || '',
+            dbaExecTime: content.dbaExecTime ? String(content.dbaExecTime).split('T')[0] + 'T' + String(content.dbaExecTime).split('T')[1]?.substring(0, 5) : '',
+            dbaExecName: content.dbaExecName || '',
+            dbaExecPhone: content.dbaExecPhone || '',
+            dbaExecResult: content.dbaExecResult || '',
+            dbaRollbackInfo: content.dbaRollbackInfo || '',
+            dbaExecRemark: content.dbaExecRemark || '',
+            opName: content.opName || '',
+            opPhone: content.opPhone || '',
+            opBackupDate: content.opBackupDate ? String(content.opBackupDate).split('T')[0] : '',
+            rollbackPlan: content.rollbackPlan || '',
+        });
+
+        try {
+            const allDefs = getAllChecklists();
+            const defsByKey = new Map(allDefs.map(d => [d.key, d]));
+            const memberRoleInRelease = viewingMember.role || '';
+            const stage = release?.stage;
+
+            const memberChecklistItems = (checklists || [])
+                .filter(c => c.userId === viewingMember.userId && (!stage || c.stage === stage))
+                .map(c => {
+                    const def = defsByKey.get(c.itemKey);
+                    return {
+                        ...c,
+                        label: def?.label || c.itemKey,
+                        allowedRoles: def?.roles || [],
+                        category: def?.category || ''
+                    };
+                })
+                .filter(c => {
+                    if (memberRoleInRelease && c.allowedRoles && c.allowedRoles.length > 0) {
+                        return c.allowedRoles.includes(memberRoleInRelease);
+                    }
+                    return true;
+                });
+
+            const nextMap = {};
+            memberChecklistItems.forEach(item => {
+                nextMap[item.itemKey] = !!item.checked;
+            });
+            setPmChecklistDraft(nextMap);
+        } catch (e) {
+            setPmChecklistDraft({});
+        }
+    }, [viewingMember, release?.stage, checklists]);
 
     // 渲染实施/验证阶段的所有填报内容（供各角色视图复用）
     const renderImplementationStageContent = () => {
@@ -703,9 +799,11 @@ export default function ReleaseDetailPage({ params }) {
             });
 
             setChecklists(r.checklists || []);
+            return r;
         } catch (error) {
             console.error('获取详情失败:', error);
             toast.error('获取详情失败');
+            return null;
         } finally {
             setLoading(false);
         }
@@ -766,6 +864,80 @@ export default function ReleaseDetailPage({ params }) {
         setContentForm({ ...contentForm, configChanges: newCfg });
     };
 
+    const pmUpdateMemberDraft = (field, value) => {
+        setPmMemberDraft(prev => {
+            if (!prev) return prev;
+            return { ...prev, [field]: value };
+        });
+    };
+
+    const pmAddDbChange = () => {
+        setPmMemberDraft(prev => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                dbChanges: [
+                    ...(prev.dbChanges || []),
+                    {
+                        reason: '',
+                        executionTime: '',
+                        changeType: '',
+                        dbName: '',
+                        tableName: '',
+                        sql: '',
+                        impact: '',
+                        affectsOnline: false
+                    }
+                ]
+            };
+        });
+    };
+
+    const pmRemoveDbChange = (index) => {
+        setPmMemberDraft(prev => {
+            if (!prev) return prev;
+            return { ...prev, dbChanges: (prev.dbChanges || []).filter((_, i) => i !== index) };
+        });
+    };
+
+    const pmUpdateDbChange = (index, field, value) => {
+        setPmMemberDraft(prev => {
+            if (!prev) return prev;
+            const next = [...(prev.dbChanges || [])];
+            next[index] = { ...next[index], [field]: value };
+            return { ...prev, dbChanges: next };
+        });
+    };
+
+    const pmAddConfigChange = () => {
+        setPmMemberDraft(prev => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                configChanges: [
+                    ...(prev.configChanges || []),
+                    { reason: '', content: '', impact: '', affectsOnline: false }
+                ]
+            };
+        });
+    };
+
+    const pmRemoveConfigChange = (index) => {
+        setPmMemberDraft(prev => {
+            if (!prev) return prev;
+            return { ...prev, configChanges: (prev.configChanges || []).filter((_, i) => i !== index) };
+        });
+    };
+
+    const pmUpdateConfigChange = (index, field, value) => {
+        setPmMemberDraft(prev => {
+            if (!prev) return prev;
+            const next = [...(prev.configChanges || [])];
+            next[index] = { ...next[index], [field]: value };
+            return { ...prev, configChanges: next };
+        });
+    };
+
     // 批量提交检查清单
     const handleChecklistBatchSubmit = async (checkedMap) => {
         const token = localStorage.getItem('token');
@@ -794,6 +966,87 @@ export default function ReleaseDetailPage({ params }) {
         } catch (e) {
             console.error('提交检查清单失败:', e);
             toast.error('提交失败');
+        }
+    };
+
+    const handlePmSaveViewingMemberContent = async () => {
+        if (!viewingMember || !pmMemberDraft) return;
+
+        const token = localStorage.getItem('token');
+        setPmSavingMember(true);
+
+        try {
+            const res = await fetch(`/api/releases/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    action: 'pm_update_member_content',
+                    targetUserId: viewingMember.userId,
+                    ...pmMemberDraft
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                toast.error(data.error || '保存失败');
+                return;
+            }
+
+            toast.success('已代成员保存填报内容');
+            const r = await fetchReleaseDetail(token);
+            if (r?.members?.length) {
+                const updated = r.members.find(m => m.userId === viewingMember.userId);
+                if (updated) setViewingMember(updated);
+            }
+            setPmEditingMember(false);
+        } catch (e) {
+            console.error('代成员保存内容失败:', e);
+            toast.error('保存失败');
+        } finally {
+            setPmSavingMember(false);
+        }
+    };
+
+    const handlePmSubmitChecklistForMember = async () => {
+        if (!viewingMember) return;
+        const token = localStorage.getItem('token');
+        setPmSavingChecklist(true);
+
+        try {
+            const res = await fetch(`/api/releases/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    action: 'update_checklist_for_member',
+                    targetUserId: viewingMember.userId,
+                    stage: release.stage,
+                    items: pmChecklistDraft
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                toast.error(data.error || '提交失败');
+                return;
+            }
+
+            toast.success('已代成员更新检查清单');
+            const r = await fetchReleaseDetail(token);
+            if (r?.members?.length) {
+                const updated = r.members.find(m => m.userId === viewingMember.userId);
+                if (updated) setViewingMember(updated);
+            }
+        } catch (e) {
+            console.error('代成员提交检查清单失败:', e);
+            toast.error('提交失败');
+        } finally {
+            setPmSavingChecklist(false);
         }
     };
 
@@ -1660,6 +1913,7 @@ export default function ReleaseDetailPage({ params }) {
     // - LD（领导）始终有管理视图（只读，可以查看所有发版）
     // - PM 只有在自己创建的发版中才有管理视图，作为成员参与时显示对应角色视图
     const hasPMView = isAdmin || isLeader || (isPM && isCreator);
+    const canPmManageRelease = isAdmin || (isPM && isCreator);
 
     // 内容编辑权限
     const canEditContent = (release.stage === 'PREPARATION' || release.stage === 'DRAFT') && (isRD || isPM);
@@ -4847,6 +5101,33 @@ export default function ReleaseDetailPage({ params }) {
                                     </span>
                                 </div>
                             </div>
+                            {canPmManageRelease && (
+                                <button
+                                    className={`btn btn-sm ${pmEditingMember ? 'btn-primary' : 'btn-secondary'}`}
+                                    onClick={() => setPmEditingMember(prev => !prev)}
+                                    disabled={pmSavingMember || pmSavingChecklist}
+                                    style={{ 
+                                        marginRight: '8px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '4px 12px',
+                                        borderRadius: '16px',
+                                        fontSize: '12px',
+                                        fontWeight: 500
+                                    }}
+                                >
+                                    {pmEditingMember ? (
+                                        <>
+                                            <span>👀</span> 取消代填
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>✏️</span> 代成员编辑
+                                        </>
+                                    )}
+                                </button>
+                            )}
                             <button className="member-detail-close" onClick={() => setViewingMember(null)}>×</button>
                         </div>
                         
@@ -4876,20 +5157,55 @@ export default function ReleaseDetailPage({ params }) {
                                     }
                                     return (
                                         <div className="member-checklist-list">
-                                            {memberChecklistItems.map(item => (
-                                                <div 
-                                                    key={item.id} 
-                                                    className={`member-checklist-item ${item.checked ? 'checked' : 'unchecked'}`}
-                                                >
-                                                    <span className="member-checklist-icon">
-                                                        {item.checked ? '✅' : '⬜'}
-                                                    </span>
-                                                    <span className="member-checklist-label">{item.label}</span>
-                                                    <span className={`member-checklist-status ${item.checked ? 'done' : 'pending'}`}>
-                                                        {item.checked ? '已完成' : '未完成'}
-                                                    </span>
+                                            {memberChecklistItems.map(item => {
+                                                const checkedValue = canPmManageRelease
+                                                    ? (pmChecklistDraft[item.itemKey] ?? item.checked)
+                                                    : item.checked;
+                                                return (
+                                                    <div
+                                                        key={item.id}
+                                                        className={`member-checklist-item ${checkedValue ? 'checked' : 'unchecked'} ${canPmManageRelease ? 'interactive' : ''}`}
+                                                        onClick={() => {
+                                                            if (canPmManageRelease) {
+                                                                const nextChecked = !checkedValue;
+                                                                setPmChecklistDraft(prev => ({ ...prev, [item.itemKey]: nextChecked }));
+                                                            }
+                                                        }}
+                                                        style={canPmManageRelease ? { cursor: 'pointer' } : {}}
+                                                    >
+                                                        <span className="member-checklist-icon">
+                                                            {canPmManageRelease ? (
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={!!checkedValue}
+                                                                    onChange={(e) => {
+                                                                        const nextChecked = e.target.checked;
+                                                                        setPmChecklistDraft(prev => ({ ...prev, [item.itemKey]: nextChecked }));
+                                                                    }}
+                                                                    onClick={e => e.stopPropagation()}
+                                                                />
+                                                            ) : (
+                                                                checkedValue ? '✅' : '⬜'
+                                                            )}
+                                                        </span>
+                                                        <span className="member-checklist-label">{item.label}</span>
+                                                        <span className={`member-checklist-status ${checkedValue ? 'done' : 'pending'}`}>
+                                                            {checkedValue ? '已完成' : '未完成'}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                            {canPmManageRelease && (
+                                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
+                                                    <button
+                                                        className="btn btn-primary btn-sm"
+                                                        onClick={handlePmSubmitChecklistForMember}
+                                                        disabled={pmSavingChecklist}
+                                                    >
+                                                        {pmSavingChecklist ? '保存中...' : '保存清单勾选'}
+                                                    </button>
                                                 </div>
-                                            ))}
+                                            )}
                                         </div>
                                     );
                                 })()}
@@ -4901,6 +5217,451 @@ export default function ReleaseDetailPage({ params }) {
                                 // 使用成员在该发版中的角色，而不是用户的所有角色
                                 const memberRoleInRelease = viewingMember.role || '';
                                 const memberRoles = memberRoleInRelease ? [memberRoleInRelease] : (viewingMember.user?.role || '').split(',');
+
+                                if (canPmManageRelease && pmEditingMember && pmMemberDraft) {
+                                    return (
+                                        <div className="member-detail-section">
+                                            <h4>📝 成员填报内容（可代填）</h4>
+
+                                            {memberRoles.includes('RD') && (
+                                                <div className="form-section" style={{ marginTop: '12px' }}>
+                                                    <div className="section-header">
+                                                        <h4 className="section-title">💻 开发变更内容</h4>
+                                                    </div>
+                                                    <div className="form-row">
+                                                        <div className="form-group">
+                                                            <label className="form-label">开发人员</label>
+                                                            <input
+                                                                className="form-input"
+                                                                value={pmMemberDraft.devName}
+                                                                onChange={e => pmUpdateMemberDraft('devName', e.target.value)}
+                                                                placeholder="请输入姓名"
+                                                            />
+                                                        </div>
+                                                        <div className="form-group">
+                                                            <label className="form-label">联系电话</label>
+                                                            <input
+                                                                className="form-input"
+                                                                value={pmMemberDraft.devPhone}
+                                                                onChange={e => pmUpdateMemberDraft('devPhone', e.target.value)}
+                                                                placeholder="请输入手机号"
+                                                            />
+                                                        </div>
+                                                        <div className="form-group">
+                                                            <label className="form-label">所属系统</label>
+                                                            <input
+                                                                className="form-input"
+                                                                value={pmMemberDraft.system}
+                                                                onChange={e => pmUpdateMemberDraft('system', e.target.value)}
+                                                                placeholder="请输入系统名称"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">发版涉及内容说明</label>
+                                                        <textarea
+                                                            className="form-textarea"
+                                                            rows={4}
+                                                            value={pmMemberDraft.contentDesc}
+                                                            onChange={e => pmUpdateMemberDraft('contentDesc', e.target.value)}
+                                                            placeholder="请填写本次发版涉及内容说明"
+                                                        />
+                                                    </div>
+
+                                                    <div className="form-section">
+                                                        <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <h4 className="section-title">🗄️ 数据库变更</h4>
+                                                            <button className="btn btn-secondary btn-sm" onClick={pmAddDbChange}>+ 添加</button>
+                                                        </div>
+                                                        {(pmMemberDraft.dbChanges || []).length === 0 ? (
+                                                            <div className="member-no-content">暂无数据库变更</div>
+                                                        ) : (
+                                                            (pmMemberDraft.dbChanges || []).map((db, idx) => (
+                                                                <div key={idx} className="member-db-change" style={{ marginTop: '12px' }}>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                        <div style={{ fontWeight: 600, fontSize: '13px' }}>#{idx + 1}</div>
+                                                                        <button className="btn btn-danger btn-sm" onClick={() => pmRemoveDbChange(idx)}>删除</button>
+                                                                    </div>
+                                                                    <div className="form-row form-row-4" style={{ marginTop: '8px' }}>
+                                                                        <div className="form-group">
+                                                                            <label className="form-label">变更类型</label>
+                                                                            <input
+                                                                                className="form-input"
+                                                                                value={db.changeType}
+                                                                                onChange={e => pmUpdateDbChange(idx, 'changeType', e.target.value)}
+                                                                                placeholder="如：DDL/DML"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="form-group">
+                                                                            <label className="form-label">数据库</label>
+                                                                            <input
+                                                                                className="form-input"
+                                                                                value={db.dbName}
+                                                                                onChange={e => pmUpdateDbChange(idx, 'dbName', e.target.value)}
+                                                                                placeholder="请输入数据库名"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="form-group">
+                                                                            <label className="form-label">表名</label>
+                                                                            <input
+                                                                                className="form-input"
+                                                                                value={db.tableName}
+                                                                                onChange={e => pmUpdateDbChange(idx, 'tableName', e.target.value)}
+                                                                                placeholder="请输入表名"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="form-group">
+                                                                            <label className="form-label">执行日期</label>
+                                                                            <input
+                                                                                className="form-input"
+                                                                                type="date"
+                                                                                value={db.executionTime}
+                                                                                onChange={e => pmUpdateDbChange(idx, 'executionTime', e.target.value)}
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="form-group">
+                                                                        <label className="form-label">变更原因</label>
+                                                                        <textarea
+                                                                            className="form-textarea"
+                                                                            rows={2}
+                                                                            value={db.reason}
+                                                                            onChange={e => pmUpdateDbChange(idx, 'reason', e.target.value)}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="form-group">
+                                                                        <label className="form-label">SQL 语句</label>
+                                                                        <textarea
+                                                                            className="form-textarea"
+                                                                            rows={4}
+                                                                            value={db.sql}
+                                                                            onChange={e => pmUpdateDbChange(idx, 'sql', e.target.value)}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="form-group">
+                                                                        <label className="form-label">可能影响</label>
+                                                                        <textarea
+                                                                            className="form-textarea"
+                                                                            rows={2}
+                                                                            value={db.impact}
+                                                                            onChange={e => pmUpdateDbChange(idx, 'impact', e.target.value)}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={!!db.affectsOnline}
+                                                                            onChange={e => pmUpdateDbChange(idx, 'affectsOnline', e.target.checked)}
+                                                                        />
+                                                                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>影响线上</span>
+                                                                    </div>
+                                                                </div>
+                                                            ))
+                                                        )}
+                                                    </div>
+
+                                                    <div className="form-section">
+                                                        <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <h4 className="section-title">⚙️ 配置变更</h4>
+                                                            <button className="btn btn-secondary btn-sm" onClick={pmAddConfigChange}>+ 添加</button>
+                                                        </div>
+                                                        {(pmMemberDraft.configChanges || []).length === 0 ? (
+                                                            <div className="member-no-content">暂无配置变更</div>
+                                                        ) : (
+                                                            (pmMemberDraft.configChanges || []).map((cfg, idx) => (
+                                                                <div key={idx} className="member-db-change" style={{ marginTop: '12px', borderLeftColor: 'var(--warning)' }}>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                        <div style={{ fontWeight: 600, fontSize: '13px' }}>#{idx + 1}</div>
+                                                                        <button className="btn btn-danger btn-sm" onClick={() => pmRemoveConfigChange(idx)}>删除</button>
+                                                                    </div>
+                                                                    <div className="form-group" style={{ marginTop: '8px' }}>
+                                                                        <label className="form-label">变更原因</label>
+                                                                        <textarea
+                                                                            className="form-textarea"
+                                                                            rows={2}
+                                                                            value={cfg.reason}
+                                                                            onChange={e => pmUpdateConfigChange(idx, 'reason', e.target.value)}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="form-group">
+                                                                        <label className="form-label">变更内容</label>
+                                                                        <textarea
+                                                                            className="form-textarea"
+                                                                            rows={3}
+                                                                            value={cfg.content}
+                                                                            onChange={e => pmUpdateConfigChange(idx, 'content', e.target.value)}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="form-group">
+                                                                        <label className="form-label">可能影响</label>
+                                                                        <textarea
+                                                                            className="form-textarea"
+                                                                            rows={2}
+                                                                            value={cfg.impact}
+                                                                            onChange={e => pmUpdateConfigChange(idx, 'impact', e.target.value)}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={!!cfg.affectsOnline}
+                                                                            onChange={e => pmUpdateConfigChange(idx, 'affectsOnline', e.target.checked)}
+                                                                        />
+                                                                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>影响线上</span>
+                                                                    </div>
+                                                                </div>
+                                                            ))
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {memberRoles.includes('QA') && (
+                                                <div className="form-section" style={{ marginTop: '12px' }}>
+                                                    <div className="section-header">
+                                                        <h4 className="section-title">🧪 测试信息</h4>
+                                                    </div>
+                                                    <div className="form-row">
+                                                        <div className="form-group">
+                                                            <label className="form-label">测试人员</label>
+                                                            <input
+                                                                className="form-input"
+                                                                value={pmMemberDraft.qaName}
+                                                                onChange={e => pmUpdateMemberDraft('qaName', e.target.value)}
+                                                            />
+                                                        </div>
+                                                        <div className="form-group">
+                                                            <label className="form-label">联系电话</label>
+                                                            <input
+                                                                className="form-input"
+                                                                value={pmMemberDraft.qaPhone}
+                                                                onChange={e => pmUpdateMemberDraft('qaPhone', e.target.value)}
+                                                            />
+                                                        </div>
+                                                        <div className="form-group">
+                                                            <label className="form-label">测试时间</label>
+                                                            <input
+                                                                className="form-input"
+                                                                type="date"
+                                                                value={pmMemberDraft.qaTestDate}
+                                                                onChange={e => pmUpdateMemberDraft('qaTestDate', e.target.value)}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {memberRoles.includes('PO') && (
+                                                <div className="form-section" style={{ marginTop: '12px' }}>
+                                                    <div className="section-header">
+                                                        <h4 className="section-title">✅ 产品验收信息</h4>
+                                                    </div>
+                                                    <div className="form-row">
+                                                        <div className="form-group">
+                                                            <label className="form-label">产品人员</label>
+                                                            <input
+                                                                className="form-input"
+                                                                value={pmMemberDraft.poName}
+                                                                onChange={e => pmUpdateMemberDraft('poName', e.target.value)}
+                                                            />
+                                                        </div>
+                                                        <div className="form-group">
+                                                            <label className="form-label">联系电话</label>
+                                                            <input
+                                                                className="form-input"
+                                                                value={pmMemberDraft.poPhone}
+                                                                onChange={e => pmUpdateMemberDraft('poPhone', e.target.value)}
+                                                            />
+                                                        </div>
+                                                        <div className="form-group">
+                                                            <label className="form-label">验收时间</label>
+                                                            <input
+                                                                className="form-input"
+                                                                type="date"
+                                                                value={pmMemberDraft.poAcceptDate}
+                                                                onChange={e => pmUpdateMemberDraft('poAcceptDate', e.target.value)}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">验收意见</label>
+                                                        <textarea
+                                                            className="form-textarea"
+                                                            rows={3}
+                                                            value={pmMemberDraft.poAcceptComment}
+                                                            onChange={e => pmUpdateMemberDraft('poAcceptComment', e.target.value)}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {memberRoles.includes('DBA') && (
+                                                <div className="form-section" style={{ marginTop: '12px' }}>
+                                                    <div className="section-header">
+                                                        <h4 className="section-title">🗄️ DBA 信息</h4>
+                                                    </div>
+                                                    <div className="form-row">
+                                                        <div className="form-group">
+                                                            <label className="form-label">DBA</label>
+                                                            <input
+                                                                className="form-input"
+                                                                value={pmMemberDraft.dbaName}
+                                                                onChange={e => pmUpdateMemberDraft('dbaName', e.target.value)}
+                                                            />
+                                                        </div>
+                                                        <div className="form-group">
+                                                            <label className="form-label">联系电话</label>
+                                                            <input
+                                                                className="form-input"
+                                                                value={pmMemberDraft.dbaPhone}
+                                                                onChange={e => pmUpdateMemberDraft('dbaPhone', e.target.value)}
+                                                            />
+                                                        </div>
+                                                        <div className="form-group">
+                                                            <label className="form-label">审核时间</label>
+                                                            <input
+                                                                className="form-input"
+                                                                type="date"
+                                                                value={pmMemberDraft.dbaReviewDate}
+                                                                onChange={e => pmUpdateMemberDraft('dbaReviewDate', e.target.value)}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">审核意见</label>
+                                                        <textarea
+                                                            className="form-textarea"
+                                                            rows={3}
+                                                            value={pmMemberDraft.dbaReviewComment}
+                                                            onChange={e => pmUpdateMemberDraft('dbaReviewComment', e.target.value)}
+                                                        />
+                                                    </div>
+
+                                                    <div className="form-section">
+                                                        <div className="section-header">
+                                                            <h4 className="section-title">⚡ 执行结果</h4>
+                                                        </div>
+                                                        <div className="form-row">
+                                                            <div className="form-group">
+                                                                <label className="form-label">执行时间</label>
+                                                                <input
+                                                                    className="form-input"
+                                                                    type="datetime-local"
+                                                                    value={pmMemberDraft.dbaExecTime}
+                                                                    onChange={e => pmUpdateMemberDraft('dbaExecTime', e.target.value)}
+                                                                />
+                                                            </div>
+                                                            <div className="form-group">
+                                                                <label className="form-label">执行人</label>
+                                                                <input
+                                                                    className="form-input"
+                                                                    value={pmMemberDraft.dbaExecName}
+                                                                    onChange={e => pmUpdateMemberDraft('dbaExecName', e.target.value)}
+                                                                />
+                                                            </div>
+                                                            <div className="form-group">
+                                                                <label className="form-label">联系电话</label>
+                                                                <input
+                                                                    className="form-input"
+                                                                    value={pmMemberDraft.dbaExecPhone}
+                                                                    onChange={e => pmUpdateMemberDraft('dbaExecPhone', e.target.value)}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <div className="form-group">
+                                                            <label className="form-label">执行结果</label>
+                                                            <textarea
+                                                                className="form-textarea"
+                                                                rows={4}
+                                                                value={pmMemberDraft.dbaExecResult}
+                                                                onChange={e => pmUpdateMemberDraft('dbaExecResult', e.target.value)}
+                                                            />
+                                                        </div>
+                                                        <div className="form-group">
+                                                            <label className="form-label">回滚情况</label>
+                                                            <textarea
+                                                                className="form-textarea"
+                                                                rows={3}
+                                                                value={pmMemberDraft.dbaRollbackInfo}
+                                                                onChange={e => pmUpdateMemberDraft('dbaRollbackInfo', e.target.value)}
+                                                            />
+                                                        </div>
+                                                        <div className="form-group">
+                                                            <label className="form-label">备注</label>
+                                                            <textarea
+                                                                className="form-textarea"
+                                                                rows={3}
+                                                                value={pmMemberDraft.dbaExecRemark}
+                                                                onChange={e => pmUpdateMemberDraft('dbaExecRemark', e.target.value)}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {memberRoles.includes('OP') && (
+                                                <div className="form-section" style={{ marginTop: '12px' }}>
+                                                    <div className="section-header">
+                                                        <h4 className="section-title">💾 运维信息</h4>
+                                                    </div>
+                                                    <div className="form-row">
+                                                        <div className="form-group">
+                                                            <label className="form-label">运维人员</label>
+                                                            <input
+                                                                className="form-input"
+                                                                value={pmMemberDraft.opName}
+                                                                onChange={e => pmUpdateMemberDraft('opName', e.target.value)}
+                                                            />
+                                                        </div>
+                                                        <div className="form-group">
+                                                            <label className="form-label">联系电话</label>
+                                                            <input
+                                                                className="form-input"
+                                                                value={pmMemberDraft.opPhone}
+                                                                onChange={e => pmUpdateMemberDraft('opPhone', e.target.value)}
+                                                            />
+                                                        </div>
+                                                        <div className="form-group">
+                                                            <label className="form-label">备份时间</label>
+                                                            <input
+                                                                className="form-input"
+                                                                type="date"
+                                                                value={pmMemberDraft.opBackupDate}
+                                                                onChange={e => pmUpdateMemberDraft('opBackupDate', e.target.value)}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">回滚方案</label>
+                                                        <textarea
+                                                            className="form-textarea"
+                                                            rows={5}
+                                                            value={pmMemberDraft.rollbackPlan}
+                                                            onChange={e => pmUpdateMemberDraft('rollbackPlan', e.target.value)}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
+                                                <button
+                                                    className="btn btn-primary btn-sm"
+                                                    onClick={handlePmSaveViewingMemberContent}
+                                                    disabled={pmSavingMember}
+                                                >
+                                                    {pmSavingMember ? '保存中...' : '保存填报内容'}
+                                                </button>
+                                                <button
+                                                    className="btn btn-secondary btn-sm"
+                                                    onClick={() => setPmEditingMember(false)}
+                                                    disabled={pmSavingMember}
+                                                >
+                                                    取消
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                }
                                 
                                 // 开发人员内容
                                 if (memberRoles.includes('RD') && (content.devName || content.contentDesc)) {

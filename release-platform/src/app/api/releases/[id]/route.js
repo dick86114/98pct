@@ -360,6 +360,116 @@ export async function PUT(request, { params }) {
             return NextResponse.json({ message: '内容保存成功' });
         }
 
+        // ACTION: PM_UPDATE_MEMBER_CONTENT (ADMIN 或创建者 PM - 代成员填报/修改内容)
+        if (data.action === 'pm_update_member_content') {
+            if (!canManageRelease) return NextResponse.json({ error: '只有管理员或发版创建者可以代成员填报内容' }, { status: 403 });
+
+            const { targetUserId } = data;
+            if (!targetUserId) return NextResponse.json({ error: '缺少 targetUserId' }, { status: 400 });
+
+            const member = await prisma.releaseMember.findUnique({
+                where: {
+                    releaseId_userId: {
+                        releaseId,
+                        userId: Number(targetUserId)
+                    }
+                }
+            });
+
+            if (!member) {
+                return NextResponse.json({ error: '目标成员不存在或不属于该发版' }, { status: 404 });
+            }
+
+            const parseDate = (dateStr) => {
+                if (!dateStr) return null;
+                const date = new Date(dateStr);
+                return isNaN(date.getTime()) ? null : date;
+            };
+
+            const scalarFields = [
+                'devName', 'devPhone', 'system', 'contentDesc',
+                'qaName', 'qaPhone', 'qaTestDate',
+                'poName', 'poPhone', 'poAcceptDate', 'poAcceptComment',
+                'dbaName', 'dbaPhone', 'dbaReviewDate', 'dbaReviewComment',
+                'dbaExecTime', 'dbaExecName', 'dbaExecPhone', 'dbaExecResult', 'dbaRollbackInfo', 'dbaExecRemark',
+                'opName', 'opPhone', 'opBackupDate', 'rollbackPlan'
+            ];
+
+            const dateFields = new Set(['qaTestDate', 'poAcceptDate', 'dbaReviewDate', 'dbaExecTime', 'opBackupDate']);
+            const createData = { releaseMemberId: member.id };
+            const updateData = {};
+
+            for (const key of scalarFields) {
+                if (!Object.prototype.hasOwnProperty.call(data, key)) continue;
+                if (dateFields.has(key)) {
+                    const parsed = parseDate(data[key]);
+                    createData[key] = parsed;
+                    updateData[key] = parsed;
+                    continue;
+                }
+                createData[key] = data[key] ?? null;
+                updateData[key] = data[key] ?? null;
+            }
+
+            if (Object.prototype.hasOwnProperty.call(data, 'dbChanges')) {
+                const dbChanges = data.dbChanges || [];
+                createData.dbChanges = {
+                    create: dbChanges.map(db => ({
+                        reason: db.reason || '',
+                        executionTime: parseDate(db.executionTime) || new Date(),
+                        changeType: db.changeType || '',
+                        dbName: db.dbName || '',
+                        tableName: db.tableName || '',
+                        sql: db.sql || '',
+                        impact: db.impact || '',
+                        affectsOnline: db.affectsOnline || false
+                    }))
+                };
+                updateData.dbChanges = {
+                    deleteMany: {},
+                    create: dbChanges.map(db => ({
+                        reason: db.reason || '',
+                        executionTime: parseDate(db.executionTime) || new Date(),
+                        changeType: db.changeType || '',
+                        dbName: db.dbName || '',
+                        tableName: db.tableName || '',
+                        sql: db.sql || '',
+                        impact: db.impact || '',
+                        affectsOnline: db.affectsOnline || false
+                    }))
+                };
+            }
+
+            if (Object.prototype.hasOwnProperty.call(data, 'configChanges')) {
+                const configChanges = data.configChanges || [];
+                createData.configChanges = {
+                    create: configChanges.map(cfg => ({
+                        reason: cfg.reason || '',
+                        content: cfg.content || '',
+                        impact: cfg.impact || '',
+                        affectsOnline: cfg.affectsOnline || false
+                    }))
+                };
+                updateData.configChanges = {
+                    deleteMany: {},
+                    create: configChanges.map(cfg => ({
+                        reason: cfg.reason || '',
+                        content: cfg.content || '',
+                        impact: cfg.impact || '',
+                        affectsOnline: cfg.affectsOnline || false
+                    }))
+                };
+            }
+
+            await prisma.memberContent.upsert({
+                where: { releaseMemberId: member.id },
+                create: createData,
+                update: updateData
+            });
+
+            return NextResponse.json({ message: '代成员保存内容成功' });
+        }
+
         // ACTION: UPDATE_QA_CONTENT (QA Only - Test Info)
         if (data.action === 'update_qa_content') {
             const isQA = userRoles.includes('QA');
@@ -621,6 +731,57 @@ export async function PUT(request, { params }) {
 
             return NextResponse.json({ 
                 message: '检查清单更新成功',
+                updatedCount: updates.length,
+                notFoundCount: notFoundItems.length
+            });
+        }
+
+        // ACTION: UPDATE_CHECKLIST_FOR_MEMBER (ADMIN 或创建者 PM - 代成员勾选清单)
+        if (data.action === 'update_checklist_for_member') {
+            if (!canManageRelease) return NextResponse.json({ error: '只有管理员或发版创建者可以代成员勾选清单' }, { status: 403 });
+
+            const { targetUserId, items, stage } = data;
+            if (!targetUserId) return NextResponse.json({ error: '缺少 targetUserId' }, { status: 400 });
+            if (!items || Object.keys(items).length === 0) {
+                return NextResponse.json({ error: '没有要更新的检查项' }, { status: 400 });
+            }
+
+            const targetStage = stage || existing.stage;
+            const updates = [];
+            const notFoundItems = [];
+
+            for (const itemKey in items) {
+                const checked = items[itemKey];
+                const checklistItem = existing.checklists.find(
+                    c => c.itemKey === itemKey && c.userId === Number(targetUserId) && c.stage === targetStage
+                );
+
+                if (checklistItem) {
+                    updates.push(
+                        prisma.checklist.update({
+                            where: { id: checklistItem.id },
+                            data: {
+                                checked,
+                                confirmedById: checked ? decoded.userId : null,
+                                confirmedAt: checked ? new Date() : null,
+                            }
+                        })
+                    );
+                } else {
+                    notFoundItems.push(itemKey);
+                }
+            }
+
+            if (updates.length === 0) {
+                return NextResponse.json({
+                    error: '没有找到可更新的检查项，请确认目标成员已被添加为发版成员，且检查项属于该阶段',
+                    notFoundItems
+                }, { status: 400 });
+            }
+
+            await prisma.$transaction(updates);
+            return NextResponse.json({
+                message: '代成员更新检查清单成功',
                 updatedCount: updates.length,
                 notFoundCount: notFoundItems.length
             });

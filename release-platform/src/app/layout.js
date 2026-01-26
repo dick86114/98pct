@@ -30,7 +30,7 @@ export default function RootLayout({ children }) {
                         __html: `
                             (function() {
                                 try {
-                                    var mode = localStorage.getItem('theme-mode') || 'system';
+                                    var mode = localStorage.getItem('theme-mode') || 'light';
                                     var theme = mode;
                                     if (mode === 'system') {
                                         theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';

@@ -6,9 +6,9 @@ const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
     // 主题模式: 'light' | 'dark' | 'system'
-    const [themeMode, setThemeMode] = useState('system');
+    const [themeMode, setThemeMode] = useState('light');
     // 实际应用的主题: 'light' | 'dark'
-    const [resolvedTheme, setResolvedTheme] = useState('dark');
+    const [resolvedTheme, setResolvedTheme] = useState('light');
 
     // 初始化：从 localStorage 读取用户偏好
     useEffect(() => {
