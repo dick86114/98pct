@@ -6091,6 +6091,28 @@ main {
   color: var(--text-secondary);
   line-height: 1.6;
   margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.member-content-item {
+  margin-bottom: 10px;
+}
+
+.member-content-item label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.member-content-item p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* 数据库变更 */
@@ -6164,6 +6186,11 @@ main {
   color: var(--text-secondary);
 }
 
+.prep-db-grid div {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .prep-db-grid b {
   color: var(--text-muted);
   font-weight: 500;
@@ -6191,6 +6218,90 @@ main {
   overflow-x: auto;
   white-space: pre-wrap;
   margin: 0;
+}
+
+/* DB变更详情网格 */
+.db-change-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.db-info-row label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.db-info-row p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-primary);
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* DB变更SQL展示 */
+.db-sql-section {
+  margin-bottom: 12px;
+}
+
+.db-sql-section label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.db-sql-code {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--bg-tertiary);
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+/* DB变更影响展示 */
+.db-impact-section {
+  margin-top: 10px;
+}
+
+.db-impact-section label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.db-impact-section p {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+/* 配置变更项内容 */
+.prep-config-item div {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+  font-size: 14px;
+  margin-bottom: 4px;
+  color: var(--text-secondary);
+}
+
+.prep-config-item div b {
+  color: var(--text-primary);
+  margin-right: 4px;
 }
 
 /* 空提示 */
@@ -8148,6 +8259,8 @@ main {
   line-height: 1.6;
   color: var(--text-secondary);
   margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .pm-dev-db-changes,
@@ -8226,6 +8339,11 @@ main {
   font-weight: 500;
 }
 
+.pm-db-details div {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .pm-db-sql {
   margin-top: 10px;
 }
@@ -8253,6 +8371,11 @@ main {
 .pm-config-item {
   font-size: 13px;
   color: var(--text-secondary);
+}
+
+.pm-config-item div {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .pm-config-item b {
@@ -9042,6 +9165,8 @@ main {
   font-size: 14px;
   color: var(--text-secondary);
   line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .pm-dba-exec-empty {

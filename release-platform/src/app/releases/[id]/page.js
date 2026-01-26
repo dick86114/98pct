@@ -42,6 +42,13 @@ const getFileIcon = (filename) => {
 
 // 系统选项（已改为使用字典）
 
+// 格式化更新时间
+const formatUpdateTime = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return `更新于 ${date.toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
+};
+
 export default function ReleaseDetailPage({ params }) {
     const { id } = params;
     const router = useRouter();
@@ -2479,6 +2486,7 @@ export default function ReleaseDetailPage({ params }) {
                                                                                 <div className="pm-progress-info">
                                                                                     <span className="pm-progress-name">{member.user?.name}</span>
                                                                                     <span className="pm-progress-role">{roleLabelsText}</span>
+                                                                                    {content.updatedAt && <span className="pm-progress-time" style={{fontSize: '11px', color: '#999', marginTop: '2px'}}>{formatUpdateTime(content.updatedAt)}</span>}
                                                                                 </div>
                                                                                 <button 
                                                                                     className="btn btn-sm btn-secondary"
@@ -2556,6 +2564,7 @@ export default function ReleaseDetailPage({ params }) {
                                                                 <div className="pm-dev-info">
                                                                     <span className="pm-dev-name">{content.devName || member.user?.name || '未知'}</span>
                                                                     <span className="pm-dev-phone">{content.devPhone || '-'}</span>
+                                                                    {content.updatedAt && <span className="pm-dev-time" style={{fontSize: '11px', color: '#999'}}>{formatUpdateTime(content.updatedAt)}</span>}
                                                                 </div>
                                                                 <span className="pm-dev-system">{content.system || '门户'}</span>
                                                             </div>
@@ -2671,6 +2680,7 @@ export default function ReleaseDetailPage({ params }) {
                                                                 <div className="pm-qa-info">
                                                                     <span className="pm-qa-name">{content.qaName || member.user?.name || '未知'}</span>
                                                                     <span className="pm-qa-phone">{content.qaPhone || member.user?.phone || '-'}</span>
+                                                                    {content.updatedAt && <span className="pm-qa-time" style={{fontSize: '11px', color: '#999'}}>{formatUpdateTime(content.updatedAt)}</span>}
                                                                 </div>
                                                                 <div className={`pm-qa-badge ${progress === 100 ? 'complete' : ''}`}>
                                                                     {progress}% 完成
@@ -2766,6 +2776,7 @@ export default function ReleaseDetailPage({ params }) {
                                                                 <div className="pm-dba-info">
                                                                     <span className="pm-dba-name">{content.dbaName || member.user?.name || '未知'}</span>
                                                                     <span className="pm-dba-phone">{content.dbaPhone || member.user?.phone || '-'}</span>
+                                                                    {content.updatedAt && <span className="pm-dba-time" style={{fontSize: '11px', color: '#999'}}>{formatUpdateTime(content.updatedAt)}</span>}
                                                                 </div>
                                                                 <div className={`pm-dba-badge ${progress === 100 ? 'complete' : ''}`}>
                                                                     {progress === 100 ? '✅ 审核完成' : `${progress}%`}
@@ -2897,6 +2908,7 @@ export default function ReleaseDetailPage({ params }) {
                                                                 <div className="pm-op-info">
                                                                     <span className="pm-op-name">{content.opName || member.user?.name || '未知'}</span>
                                                                     <span className="pm-op-phone">{content.opPhone || member.user?.phone || '-'}</span>
+                                                                    {content.updatedAt && <span className="pm-op-time" style={{fontSize: '11px', color: '#999'}}>{formatUpdateTime(content.updatedAt)}</span>}
                                                                 </div>
                                                                 <div className={`pm-op-badge ${progress === 100 ? 'complete' : ''}`}>
                                                                     {progress === 100 ? '✅ 准备完成' : `${progress}%`}

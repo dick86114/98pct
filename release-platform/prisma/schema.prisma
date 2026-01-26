@@ -95,6 +95,7 @@ model MemberContent {
   opPhone         String?
   opBackupDate    DateTime?
   rollbackPlan    String?
+  updatedAt       DateTime       @default(now()) @updatedAt // 内容更新时间
   releaseMember   ReleaseMember  @relation(fields: [releaseMemberId], references: [id], onDelete: Cascade)
 }
 
