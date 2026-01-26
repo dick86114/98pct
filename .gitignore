@@ -49,3 +49,4 @@ release-platform/public/snapshots/*
 *.tgz
 .cache/
 *.tmp
+.kiro/
